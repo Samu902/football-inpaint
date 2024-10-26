@@ -7,7 +7,8 @@ var config: any = {
     entry: './src/index.tsx',
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: 'bundle.[fullhash].js'
+        filename: 'bundle.[fullhash].js',
+        assetModuleFilename: '[path][name][ext]'
     },
     module: {
         rules: [
@@ -24,7 +25,11 @@ var config: any = {
             {
                 test: /\.css$/,
                 use: ['style-loader', 'css-loader'],
-            }
+            },
+            {
+                test: /\.(png|svg|jpg|jpeg|gif)$/i,
+                type: 'asset/resource',
+            },
         ]
     },
     resolve: {
@@ -40,7 +45,7 @@ var config: any = {
 
 module.exports = (env: any, argv: any) => {
 
-    if(argv.mode == 'development') {
+    if (argv.mode == 'development') {
         config.devtool = 'eval-source-map';
         config.devServer = {
             static: path.resolve(__dirname, 'dist'),
@@ -49,7 +54,7 @@ module.exports = (env: any, argv: any) => {
             open: true
         };
     }
-    if(argv.mode == 'production') {
+    if (argv.mode == 'production') {
         config.devtool = false;
         config.performance = {
             hints: false,
