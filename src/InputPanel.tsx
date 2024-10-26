@@ -8,9 +8,10 @@ export default function InputPanel() {
     
     
     return (
-        <Container>
-            <h4 className='text-center'>Carica l'immagine che vuoi processare.</h4>
-            <Form.Control type='file' />
+        <Container className='text-center px-5 border border-3 rounded-2'>
+            <h4 className='my-4'>Carica l'immagine che vuoi processare.</h4>
+            <img src='' width={512} height={256} />
+            <Form.Control className='my-4' type='file' />
         </Container>
     );
 }

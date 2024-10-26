@@ -23,10 +23,10 @@ export default function App() {
     };
 
     return (
-        <>
+        <Container fluid>
             <h1 className='text-center my-4'>Football Inpaint</h1>
-            <div className='row bg-danger'>
-                <div className='col-6 bg-secondary'>
+            <div className='row'>
+                <div className='col-6'>
                     <InputPanel />
                 </div>
                 <div className='col-6 bg-primary'>
@@ -52,6 +52,6 @@ export default function App() {
                 ))}
             </div>
         </div> */}
-        </>
+        </Container>
     );
 }
