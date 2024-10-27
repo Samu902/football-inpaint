@@ -5,11 +5,23 @@ import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
 import CardGroup from 'react-bootstrap/CardGroup';
 import TeamCard from './TeamCard';
+import { shirts } from './Shirts';
 
 export default function TeamsPanel() {
 
     let teams = [1, 2, 3, 4, 5]
     let teamsPerRow = 5
+
+    const [selectedTeam1, setSelectedTeam1] = useState(0);
+    const [selectedTeam2, setSelectedTeam2] = useState(0);
+
+    function updateSelectedTeam1(index: number) {
+        setSelectedTeam1(index);
+    }
+
+    function updateSelectedTeam2(index: number) {
+        setSelectedTeam2(index);
+    }
 
     return (
         <Container className='text-center my-4 px-5 py-4 border border-3 rounded-2'>
@@ -22,7 +34,7 @@ export default function TeamsPanel() {
                     <CardGroup className='p-auto'>
                         {
                             teams.map((team, key) => {
-                                return <TeamCard />
+                                return <TeamCard key={key} index={key} selected={key == selectedTeam1} shirt={shirts[key]} onClickFunction={index => updateSelectedTeam1(index)} />
                             })
                         }
                     </CardGroup>
@@ -36,7 +48,7 @@ export default function TeamsPanel() {
                     <CardGroup className='p-auto'>
                         {
                             teams.map((team, key) => {
-                                return <TeamCard />
+                                return <TeamCard key={key} index={key} selected={key == selectedTeam2} shirt={shirts[key]} onClickFunction={index => updateSelectedTeam2(index)} />
                             })
                         }
                     </CardGroup>

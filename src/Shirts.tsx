@@ -1,15 +1,15 @@
-import Juve1 from '/img/shirts/juve.jpg';
-import Juve2 from '/img/shirts/juve.jpg';
-import Juve3 from '/img/shirts/juve.jpg';
-import Juve4 from '/img/shirts/juve.jpg';
-import Juve5 from '/img/shirts/juve.jpg';
-import Juve6 from '/img/shirts/juve.jpg';
+import Team1 from '/img/shirts/juve.jpg';
+import Team2 from '/img/shirts/juve.jpg';
+import Team3 from '/img/shirts/juve.jpg';
+import Team4 from '/img/shirts/juve.jpg';
+import Team5 from '/img/shirts/juve.jpg';
+import Team6 from '/img/shirts/juve.jpg';
 
 export const shirts = [
-    Juve1,
-    Juve2,
-    Juve3,
-    Juve4,
-    Juve5,
-    Juve6
+    { img: Team1, team: "Juventus" },
+    { img: Team2, team: "Juventus" },
+    { img: Team3, team: "Juventus" },
+    { img: Team4, team: "Juventus" },
+    { img: Team5, team: "Juventus" },
+    { img: Team6, team: "Juventus" }
 ];
