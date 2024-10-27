@@ -23,19 +23,17 @@ export default function App() {
     };
 
     return (
-        <Container fluid>
+        <Container>
             <h1 className='text-center my-4'>Football Inpaint</h1>
             <div className='row'>
                 <div className='col-6'>
                     <InputPanel />
                 </div>
-                <div className='col-6 bg-primary'>
+                <div className='col-6'>
                     <OutputPanel />
                 </div>
             </div>
-            <div className='bg-warning'>
-                <TeamsPanel />
-            </div>
+            <TeamsPanel />
             {/* <div className="App">
             <h1>Carica la tua immagine e seleziona una maglia</h1>
             <input type="file" onChange={handleImageUpload} />

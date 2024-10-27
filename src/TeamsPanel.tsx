@@ -11,7 +11,7 @@ export default function TeamsPanel() {
     let teamsPerRow = 5
 
     return (
-        <Container className='py-4'>
+        <Container className='text-center my-4 px-5 py-4 border border-3 rounded-2'>
             <h5 className='text-center mb-4'>Scegli le due squadre che appariranno nell'immagine finale.</h5>
             <Row>
                 {
