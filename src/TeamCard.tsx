@@ -6,13 +6,28 @@ import { shirts } from './Shirts';
 
 export default function TeamCard() {
 
+    const [hover, setHover] = useState(false);
+
+    function onMouseEnter(e: any) {
+        e.preventDefault();
+        setHover(true);
+    }
+
+    function onMouseLeave(e: any) {
+        e.preventDefault();
+        setHover(false);
+    }
+
     return (
-        <Card style={{ width: '18rem' }}>
-            <Card.Img variant="top" src={shirts[0]} width={128} height={128}/>
-            <Card.Body>
-                <Card.Text className='text-center'>Juventus</Card.Text>
-                {/* <Button variant="primary">Go somewhere</Button> */}
-            </Card.Body>
+        <Card onMouseEnter={e => onMouseEnter(e)} onMouseLeave={e => onMouseLeave(e)} style={{flex: 'none'}} >
+            <img src={shirts[0]} width={128} height={128} />
+            {
+                hover ? (
+                    <Card.ImgOverlay className='p-0 bg-secondary opacity-50 d-flex align-items-center justify-content-center'>
+                        <Card.Title className='opacity-100'>Juventus</Card.Title>
+                    </Card.ImgOverlay>
+                ) : ('')
+            }
         </Card>
     );
 }
