@@ -34,7 +34,7 @@ export default function TeamsPanel() {
                     <CardGroup className='p-auto'>
                         {
                             teams.map((team, key) => {
-                                return <TeamCard key={key} index={key} selected={key == selectedTeam1} shirt={shirts[key]} onClickFunction={index => updateSelectedTeam1(index)} />
+                                return <TeamCard key={key} selected={key == selectedTeam1} shirt={shirts[key]} onClickFunction={() => updateSelectedTeam1(key)} />
                             })
                         }
                     </CardGroup>
@@ -48,7 +48,7 @@ export default function TeamsPanel() {
                     <CardGroup className='p-auto'>
                         {
                             teams.map((team, key) => {
-                                return <TeamCard key={key} index={key} selected={key == selectedTeam2} shirt={shirts[key]} onClickFunction={index => updateSelectedTeam2(index)} />
+                                return <TeamCard key={key} selected={key == selectedTeam2} shirt={shirts[key]} onClickFunction={() => updateSelectedTeam2(key)} />
                             })
                         }
                     </CardGroup>

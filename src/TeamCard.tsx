@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import Card from 'react-bootstrap/Card';
 
 interface TeamCardProps {
-    index: number,
     selected: boolean,
-    onClickFunction: (i: number) => void,
+    onClickFunction: () => void,
     shirt: { img: any, team: string }
 }
 
@@ -23,7 +22,7 @@ export default function TeamCard(props: TeamCardProps) {
     }
 
     return (
-        <Card onMouseEnter={e => onMouseEnter(e)} onMouseLeave={e => onMouseLeave(e)} style={{ flex: 'none', cursor: 'pointer' }} onClick={() => props.onClickFunction(props.index)}>
+        <Card onMouseEnter={e => onMouseEnter(e)} onMouseLeave={e => onMouseLeave(e)} style={{ flex: 'none', cursor: 'pointer' }} onClick={props.onClickFunction}>
             <img src={props.shirt.img} width={128} height={128} />
             {
                 hover || props.selected ? (
