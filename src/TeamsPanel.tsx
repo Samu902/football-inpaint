@@ -9,7 +9,7 @@ import { shirts } from './Shirts';
 
 export default function TeamsPanel() {
 
-    let teams = [1, 2, 3, 4, 5]
+    let teams = [1, 2, 3, 4, 5, 6]
     let teamsPerRow = 5
 
     const [selectedTeam1, setSelectedTeam1] = useState(0);
