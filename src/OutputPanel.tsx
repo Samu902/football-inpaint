@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Form from 'react-bootstrap/Form';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -15,14 +14,15 @@ export default function OutputPanel(props: OutputPanelProps) {
 
     const [image, setImage] = useState(null);
 
+    props.modelApi.onProcessStart = onImageStarted;
     props.modelApi.onProcessEnd = onImageCompleted;
+
+    function onImageStarted() {
+        setImage(null);
+    }
 
     function onImageCompleted(outputImage: string | ArrayBuffer) {
         setImage(outputImage);
-    }
-
-    function saveImage() {
-        alert("salvato");
     }
 
     return (
@@ -31,7 +31,15 @@ export default function OutputPanel(props: OutputPanelProps) {
             <img src={image || PlaceholderImage} width={512} height={256} className='border border-3 rounded-3' />
             <Row className='mt-4'>
                 <Col>
-                    <Button type='button' className='btn btn-success' disabled={!image} onClick={saveImage}>Salva!</Button>
+                    {
+                        image ? (
+                            <a download='processed_image.png' href={image}>
+                                <Button type='button' className='btn btn-success'>Salva!</Button>
+                            </a>
+                        ) : (
+                            <Button type='button' className='btn btn-success' disabled={true}>Salva!</Button>
+                        )
+                    }
                 </Col>
             </Row>
         </Container>
