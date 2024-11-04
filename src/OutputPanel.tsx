@@ -3,6 +3,7 @@ import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
 import PlaceholderImage from '/img/placeholder.jpg';
 import ModelApi from './ModelApi';
 
@@ -13,22 +14,36 @@ interface OutputPanelProps {
 export default function OutputPanel(props: OutputPanelProps) {
 
     const [image, setImage] = useState(null);
+    const [processing, setProcessing] = useState(false);
 
     props.modelApi.onProcessStart = onImageStarted;
     props.modelApi.onProcessEnd = onImageCompleted;
 
     function onImageStarted() {
         setImage(null);
+        setProcessing(true);
     }
-
+    
     function onImageCompleted(outputImage: string | ArrayBuffer) {
+        setProcessing(false);
         setImage(outputImage);
     }
 
     return (
         <Container className='text-center px-5 py-4 border border-3 rounded-2'>
             <h4 className='mb-4'>Qui apparirà l'immagine processata.</h4>
-            <img src={image || PlaceholderImage} width={512} height={256} className='border border-3 rounded-3' />
+            <div className='position-relative'>
+                <img src={image || PlaceholderImage} width={512} height={256} className='border border-3 rounded-3' />
+                {
+                    processing &&
+                    <div className='position-absolute top-50 start-50 translate-middle'>
+                        <p>Attendi...</p>
+                        <Spinner animation="border" role="status" size='sm'>
+                            <span className="visually-hidden">Loading...</span>
+                        </Spinner>
+                    </div>
+                }
+            </div>
             <Row className='mt-4'>
                 <Col>
                     {
