@@ -34,8 +34,7 @@ export default function InputPanel(props: InputPanelProps) {
     }
 
     function onProcessClick() {
-        alert("processa")
-        //props.modelApi.processImage();
+        props.modelApi.processImage();
     }
 
     return (
