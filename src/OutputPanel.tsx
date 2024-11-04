@@ -33,7 +33,7 @@ export default function OutputPanel(props: OutputPanelProps) {
                 <Col>
                     {
                         image ? (
-                            <a download='processed_image.png' href={image}>
+                            <a download={props.modelApi.inputImage.name.split('.').slice(0, -1).join('.') + '_processed.png'} href={image}>
                                 <Button type='button' className='btn btn-success'>Salva!</Button>
                             </a>
                         ) : (
