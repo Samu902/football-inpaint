@@ -1,5 +1,4 @@
 import React from 'react';
-import './App.css';
 import Container from 'react-bootstrap/Container';
 import InputPanel from './InputPanel';
 import OutputPanel from './OutputPanel';
