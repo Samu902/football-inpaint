@@ -44,7 +44,7 @@ export default function InputPanel(props: InputPanelProps) {
             <img src={image || PlaceholderImage} width={512} height={256} className='border border-3 rounded-3' />
             <Row className='mt-4'>
                 <Col xs={9}>
-                    <Form.Control type='file' onChange={onFileChange} />
+                    <Form.Control type='file' accept=".jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*" onChange={onFileChange} />
                 </Col>
                 <Col xs={3}>
                     <Button type='button' className='btn btn-primary' disabled={!image} onClick={onProcessClick}>Processa!</Button>
