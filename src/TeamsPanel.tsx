@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
@@ -13,9 +12,6 @@ interface TeamsPanelProps {
 }
 
 export default function TeamsPanel(props: TeamsPanelProps) {
-
-    let teams = [1, 2, 3, 4, 5, 6]
-    let teamsPerRow = 5
 
     const [selectedTeam1, setSelectedTeam1] = useState(0);
     const [selectedTeam2, setSelectedTeam2] = useState(0);
@@ -40,7 +36,7 @@ export default function TeamsPanel(props: TeamsPanelProps) {
                 <Col>
                     <CardGroup className='p-auto'>
                         {
-                            teams.map((team, key) => {
+                            shirts.map((team, key) => {
                                 return <TeamCard key={key} selected={key == selectedTeam1} shirt={shirts[key]} onClickFunction={() => updateSelectedTeam1(key)} />
                             })
                         }
@@ -54,7 +50,7 @@ export default function TeamsPanel(props: TeamsPanelProps) {
                 <Col>
                     <CardGroup className='p-auto'>
                         {
-                            teams.map((team, key) => {
+                            shirts.map((team, key) => {
                                 return <TeamCard key={key} selected={key == selectedTeam2} shirt={shirts[key]} onClickFunction={() => updateSelectedTeam2(key)} />
                             })
                         }
