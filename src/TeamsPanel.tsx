@@ -6,8 +6,13 @@ import Container from 'react-bootstrap/Container';
 import CardGroup from 'react-bootstrap/CardGroup';
 import TeamCard from './TeamCard';
 import { shirts } from './Shirts';
+import ModelApi from './ModelApi';
 
-export default function TeamsPanel() {
+interface TeamsPanelProps {
+    modelApi: ModelApi
+}
+
+export default function TeamsPanel(props: TeamsPanelProps) {
 
     let teams = [1, 2, 3, 4, 5, 6]
     let teamsPerRow = 5
@@ -17,10 +22,12 @@ export default function TeamsPanel() {
 
     function updateSelectedTeam1(index: number) {
         setSelectedTeam1(index);
+        props.modelApi.team1 = shirts[index].img;
     }
 
     function updateSelectedTeam2(index: number) {
         setSelectedTeam2(index);
+        props.modelApi.team2 = shirts[index].img;
     }
 
     return (

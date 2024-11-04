@@ -5,8 +5,13 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Button from 'react-bootstrap/Button';
 import PlaceholderImage from '/img/placeholder.jpg';
+import ModelApi from './ModelApi';
 
-export default function InputPanel() {
+interface InputPanelProps {
+    modelApi: ModelApi
+}
+
+export default function InputPanel(props: InputPanelProps) {
 
     const [file, setFile] = useState<File>();
     const [image, setImage] = useState(null);
@@ -20,10 +25,17 @@ export default function InputPanel() {
             const reader = new FileReader();
             reader.onloadend = () => setImage(reader.result);
             reader.readAsDataURL(e.target.files[0]);
+            props.modelApi.inputImage = e.target.files[0];
         }
         else {
             setImage(null);
+            props.modelApi.inputImage = null;
         }
+    }
+
+    function onProcessClick() {
+        alert("processa")
+        //props.modelApi.processImage();
     }
 
     return (
@@ -35,7 +47,7 @@ export default function InputPanel() {
                     <Form.Control type='file' onChange={onFileChange} />
                 </Col>
                 <Col xs={3}>
-                    <Button type='button' className='btn btn-primary' onClick={() => alert(file.name)}>Processa!</Button>
+                    <Button type='button' className='btn btn-primary' disabled={!image} onClick={onProcessClick}>Processa!</Button>
                 </Col>
             </Row>
         </Container>
