@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, send_file
 from PIL import Image
-import traceback
 import pipeline
 
 app = Flask(__name__)
@@ -23,7 +22,7 @@ def home():
             attachment_filename='processed_image.png'
         ), 200, cors_headers
     except Exception as e:
-        return jsonify({'error': traceback.print_exc()}), 500, cors_headers
+        return jsonify({'error': str(e)}), 500, cors_headers
     #return jsonify({'msg': 'Home'}), 200, cors_headers
 
 @app.route('/process-image', methods=['POST'])
@@ -46,8 +45,8 @@ def process_image():
         return jsonify({'error': 'No selected file'}), 500, cors_headers
     
     # Controllo dello stato della pipeline: se non è pronta (init non completo), rigetto la richiesta
-    if not pipeline.ready:
-        return jsonify({'error': 'Pipeline is not ready: please retry later'}), 500, cors_headers
+    #if not pipeline.ready:
+    #    return jsonify({'error': 'Pipeline is not ready: please retry later'}), 500, cors_headers
 
     # Elaborazione dell'immagine
     try:    
@@ -55,7 +54,7 @@ def process_image():
         processed_image = pipeline.start(image, team1, team2)
         processed_image.save('./last_processed.png', 'PNG')
     except Exception as e:
-        return jsonify({'error': traceback.print_exc()}), 500, cors_headers
+        return jsonify({'error': str(e)}), 500, cors_headers
     
     return send_file(
         './last_processed.png',
@@ -65,5 +64,5 @@ def process_image():
     ), 200, cors_headers
 
 if __name__ == '__main__':
-    pipeline.init()
+    #pipeline.init()
     app.run(debug=True, port=5000)
