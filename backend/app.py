@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_file
 from PIL import Image
+import traceback
 import pipeline
 
 app = Flask(__name__)
@@ -54,13 +55,15 @@ def process_image():
         processed_image = pipeline.start(image, team1, team2)
         processed_image.save('./last_processed.png', 'PNG')
     except Exception as e:
+        with open('app.log', 'w+') as f:
+            traceback.print_exc(file=f)
         return jsonify({'error': str(e)}), 500, cors_headers
     
     return send_file(
         './last_processed.png',
         mimetype='image/png',
         as_attachment=True,
-        attachment_filename='processed_image.png'
+        download_name='processed_image.png'
     ), 200, cors_headers
 
 if __name__ == '__main__':
