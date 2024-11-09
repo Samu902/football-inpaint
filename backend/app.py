@@ -20,7 +20,7 @@ def home():
             './last_processed.png',
             mimetype='image/png',
             as_attachment=True,
-            attachment_filename='processed_image.png'
+            download_name='processed_image.png'
         ), 200, cors_headers
     except Exception as e:
         return jsonify({'error': str(e)}), 500, cors_headers
@@ -67,5 +67,5 @@ def process_image():
     ), 200, cors_headers
 
 if __name__ == '__main__':
-    #pipeline.init()
-    app.run(debug=True, port=5000)
+    pipeline.init()
+    app.run(debug=True, port=5000, host='0.0.0.0')
