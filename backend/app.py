@@ -1,9 +1,16 @@
 from flask import Flask, request, jsonify, send_file
+from celery import Celery
 from PIL import Image
 import traceback
-import pipeline
+from pipeline import Pipeline
 
 app = Flask(__name__)
+celery = Celery(
+    'app',
+    broker='redis://127.0.0.1:6379/0'
+)
+
+#celery -A app.celery worker --loglevel=INFO
 
 cors_headers = { 
     'Access-Control-Allow-Origin': '*',
@@ -15,7 +22,7 @@ cors_headers = {
 # Test endpoint
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    try:    
+    try:
         return send_file(
             './last_processed.png',
             mimetype='image/png',
@@ -50,9 +57,9 @@ def process_image():
     #    return jsonify({'error': 'Pipeline is not ready: please retry later'}), 500, cors_headers
 
     # Elaborazione dell'immagine
-    try:    
+    try:
         image = Image.open(file.stream)
-        processed_image = pipeline.start(image, team1, team2)
+        processed_image = pipe.start(image, team1, team2)
         processed_image.save('./last_processed.png', 'PNG')
     except Exception as e:
         with open('app.log', 'w+') as f:
@@ -67,5 +74,6 @@ def process_image():
     ), 200, cors_headers
 
 if __name__ == '__main__':
-    pipeline.init()
+    pipe = Pipeline()
+    pipe.init()
     app.run(debug=True, port=5000, host='0.0.0.0')
