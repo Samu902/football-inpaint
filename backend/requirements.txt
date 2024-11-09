@@ -1,15 +1,22 @@
 accelerate==1.1.1
+amqp==5.2.0
 apturl==0.5.2
+async-timeout==5.0.1
 Babel==2.8.0
 bcrypt==3.2.0
 beautifulsoup4==4.10.0
+billiard==4.2.1
 blinker==1.4
 Brlapi==0.8.3
+celery==5.4.0
 certifi==2020.6.20
 cffi==1.15.0
 chardet==4.0.0
 cliapp==1.20180812.1
-click==8.0.3
+click==8.1.7
+click-didyoumean==0.3.1
+click-plugins==1.1.1
+click-repl==0.3.0
 cmdtest==0.32+git
 colorama==0.4.4
 command-not-found==0.3
@@ -45,6 +52,7 @@ Jinja2==3.0.3
 joblib==1.4.2
 keyring==23.5.0
 kiwisolver==1.4.7
+kombu==5.4.2
 language-selector==0.1
 launchpadlib==1.10.16
 lazr.restfulclient==0.14.4
@@ -87,6 +95,7 @@ peft==0.13.2
 pexpect==4.8.0
 pillow==11.0.0
 ply==3.11
+prompt_toolkit==3.0.48
 protobuf==5.28.3
 psutil==6.1.0
 ptyprocess==0.7.0
@@ -111,6 +120,7 @@ python-debian==0.1.43+ubuntu1.1
 pytz==2022.1
 pyxdg==0.27
 PyYAML==5.4.1
+redis==5.2.0
 regex==2024.11.6
 reportlab==3.6.8
 requests==2.25.1
@@ -149,7 +159,9 @@ umap-learn==0.5.7
 unattended-upgrades==0.1
 urllib3==1.26.5
 usb-creator==0.3.7
+vine==5.1.0
 wadllib==1.3.6
+wcwidth==0.2.13
 webencodings==0.5.1
 Werkzeug==2.0.2
 xcffib==0.11.1
