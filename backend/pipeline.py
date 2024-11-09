@@ -242,7 +242,8 @@ class Pipeline:
             #init_image = Image.new("RGB", (1024, 1024), (15, 191, 88))
             mask_image = dilated_mask(Image.open(f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg").convert('L').resize(output_inpaint_size), 6) # load, dilate and resize mask
             #mask_image = Image.new("L", (1024, 1024), 255)
-            self.SDXL_INPAINTING_PIPELINE.set_adapters("sq1")
+            team_code = team1_code if team_ids[i] == 0 else team2_code
+            self.SDXL_INPAINTING_PIPELINE.set_adapters(team_code)
             image = self.SDXL_INPAINTING_PIPELINE(
                 prompt=prompt,
                 negative_prompt=negative_prompt,

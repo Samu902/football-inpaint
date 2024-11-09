@@ -31,7 +31,6 @@ def home():
         ), 200, cors_headers
     except Exception as e:
         return jsonify({'error': str(e)}), 500, cors_headers
-    #return jsonify({'msg': 'Home'}), 200, cors_headers
 
 @app.route('/process-image', methods=['POST'])
 def process_image():
@@ -51,10 +50,6 @@ def process_image():
     
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 500, cors_headers
-    
-    # Controllo dello stato della pipeline: se non è pronta (init non completo), rigetto la richiesta
-    #if not pipeline.ready:
-    #    return jsonify({'error': 'Pipeline is not ready: please retry later'}), 500, cors_headers
 
     # Elaborazione dell'immagine
     try:
@@ -75,5 +70,4 @@ def process_image():
 
 if __name__ == '__main__':
     pipe = Pipeline()
-    pipe.init()
     app.run(debug=True, port=5000, host='0.0.0.0')
