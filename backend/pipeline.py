@@ -22,17 +22,67 @@ import cv2 as cv
 
 #ready = False
 
+ROBOFLOW_DETECTION_MODEL = None
+SAM2_SEGMENT_MODEL = None
+SXDL_INPAINTING_PIPELINE = None
+TEAM_CLASSIFIER_MODEL = None
+DEVICE = None
+
 def init(): # andrà prob spostato in dockerfile
     #global ready
+    global ROBOFLOW_DETECTION_MODEL
+    global SAM2_SEGMENT_MODEL
+    global SXDL_INPAINTING_PIPELINE
+    global TEAM_CLASSIFIER_MODEL
+    global DEVICE
+
+    print('Initializing...')
+
+    # setup env var
+    print('working directory: ' + os.getcwd())
+    DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    # make huggingface cache dir point to custom location (to keep everything inside the project)
+    # used by sxdl and siglip model
+    os.makedirs('./huggingface_cache/hub', exist_ok=True)
+    os.environ['HF_HOME'] = os.getcwd() + '/huggingface_cache'
+    os.environ['HF_HUB_CACHE'] = os.environ['HF_HOME'] + '/hub'
+
+    # ignore proxies
+    os.environ['HTTP_PROXY'] = ''
+    os.environ['http_proxy'] = ''
+    os.environ['HTTPS_PROXY'] = ''
+    os.environ['https_proxy'] = ''
+
+    # download roboflow model and loras from google drive if not present
+    # andrà prob spostato in dockerfile
+    if not os.path.isfile('./roboflow_model/best.pt'):
+        gdown.download(id='103DgLujAKKLlfETz-rgDO0-ibvQh7evQ', output='./roboflow_model/best.pt')
+    if not os.path.isdir('./sdxl_lora_weights'):
+        gdown.download_folder(id='1VvzOiPwhkv7fuK7P3IktuEzuXdnKg3Le', output='./sdxl_lora_weights')
+
+    #### INIZIALIZZO qua i modelli in modo che sia caricati globalmente e solo una volta: meno spreco di memoria e tempo
+    #ROBOFLOW_DETECTION_MODEL = YOLO("roboflow_model/best.pt")
+    #SAM2_SEGMENT_MODEL = SAM("sam2_t.pt")
+    # sarebbe meglio spostare questo sam2_t in una cartella apposta
+    #TEAM_CLASSIFIER_MODEL = TeamClassifier(device=my_device)
+    #SXDL_INPAINTING_PIPELINE = 
+    #pipe = AutoPipelineForInpainting.from_pretrained(
+    #    "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+    #    #torch_dtype=torch.float16,
+    #    use_safetensors=True
+    #)
+    #pipe.load_lora_weights(f"./sdxl_lora_weights/{team1_code}", weight_name="pytorch_lora_weights.safetensors", adapter_name="sq1")
+    #pipe.load_lora_weights(f"./sdxl_lora_weights/{team2_code}", weight_name="pytorch_lora_weights.safetensors", adapter_name="sq2")
+    # + gli altri lora e si attivano quando servono con set adapter
 
     clean_data_dir()
-
-    gdown.download(id='103DgLujAKKLlfETz-rgDO0-ibvQh7evQ', output='./roboflow-model/best.pt')
-    gdown.download_folder(id='1VvzOiPwhkv7fuK7P3IktuEzuXdnKg3Le', output='./sdxl_lora_weights')
 
     #ready = True
 
 def clean_data_dir():
+    print('Cleaning data directory...')
+
     shutil.rmtree('./data', ignore_errors=True)
 
     os.makedirs('./data/stage_0', exist_ok=True)
@@ -75,7 +125,7 @@ def start(input_image: Image.Image, team1: str, team2: str):
     # questo modello trova i giocatori nell'immagine di partenza, crea le bounding box e ritaglia le immagini dei singoli giocatori
 
     # Load pretrained Roboflow YOLO model (training_model_1.ipynb)
-    model = YOLO("roboflow-model/best.pt")
+    model = YOLO("roboflow_model/best.pt")
 
     # Run batched inference on input image
     result_stage_1 = model(input_image)[0]
@@ -264,6 +314,9 @@ def start(input_image: Image.Image, team1: str, team2: str):
         ###
     # Salva l'immagine risultante
     general_image.save(f"data/stage_4/result.jpg")
+
+    ### per liberare memoria
+    #del boxes, masks ecc...
 
     return general_image
 
