@@ -2,6 +2,7 @@
 import os
 import shutil
 import gdown
+from my_util import base64_to_PIL
 
 # stage 1
 from ultralytics import YOLO
@@ -20,274 +21,300 @@ from diffusers import AutoPipelineForInpainting
 import torch
 import cv2 as cv
 
-class Pipeline:
-    def __init__(self):
-        print('Initializing...')
+# stage 4
 
-        # setup env var
-        print('working directory: ' + os.getcwd())
-        self.DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+# celery
+from celery import Celery
 
-        # make huggingface cache dir point to custom location (to keep everything inside the project)
-        # used by sxdl and siglip model
-        os.makedirs('./huggingface_cache/hub', exist_ok=True)
-        os.environ['HF_HOME'] = os.getcwd() + '/huggingface_cache'
-        os.environ['HF_HUB_CACHE'] = os.environ['HF_HOME'] + '/hub'
+celery = Celery(
+    'pipeline',
+    broker='redis://127.0.0.1:6379/0',
+    backend='redis://127.0.0.1:6379/0'
+)
+#celery -A pipeline.celery worker --loglevel=INFO
 
-        # ignore proxies
-        os.environ['HTTP_PROXY'] = ''
-        os.environ['http_proxy'] = ''
-        os.environ['HTTPS_PROXY'] = ''
-        os.environ['https_proxy'] = ''
+DEVICE = None
+ROBOFLOW_DETECTION_MODEL = None
+SAM2_SEGMENT_MODEL = None
+TEAM_CLASSIFIER_MODEL = None
+SDXL_INPAINTING_PIPELINE = None
+INITIALIZED = False
 
-        # download roboflow model and loras from google drive if not present
-        if not os.path.isfile('./roboflow_model/best.pt'):
-            gdown.download(id='103DgLujAKKLlfETz-rgDO0-ibvQh7evQ', output='./roboflow_model/best.pt')
-        if not os.path.isdir('./sdxl_lora_weights'):
-            gdown.download_folder(id='1VvzOiPwhkv7fuK7P3IktuEzuXdnKg3Le', output='./sdxl_lora_weights')
+def init_enviroment():
+    global DEVICE
+    global ROBOFLOW_DETECTION_MODEL
+    global SAM2_SEGMENT_MODEL
+    global TEAM_CLASSIFIER_MODEL
+    global SDXL_INPAINTING_PIPELINE
+    global INITIALIZED
 
-        # initialize models not to waste time and memory every time
-        self.ROBOFLOW_DETECTION_MODEL = YOLO("roboflow_model/best.pt")                  # pretrained Roboflow YOLO model (training_model_1.ipynb)
-        self.SAM2_SEGMENT_MODEL = SAM("sam2_model/sam2_t.pt")                           # SAM2 tiny model (good quality and speed)
-        self.TEAM_CLASSIFIER_MODEL = TeamClassifier(device=self.DEVICE)                 # Roboflow all-in-one Team Classifier model
-        self.SDXL_INPAINTING_PIPELINE = AutoPipelineForInpainting.from_pretrained(      # SDXL inpainting model
-            "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
-            #torch_dtype=torch.float16,
-            use_safetensors=True
-        )
-        # load team lora weights on sdxl model
-        self.SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqjvnts", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqjvnts")
-        self.SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqfrntn", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqfrntn")
-        self.SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqntrxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqntrxx")
-        self.SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqmlnxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqmlnxx")
-        self.SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqnplxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqnplxx")
-        self.SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqrmxxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqrmxxx")
-        
-        # clean data directory
-        self.clean_data_dir()
+    print('Initializing pipeline environment...')
 
-    def clean_data_dir(self):
-        print('Cleaning data directory...')
+    # setup env var
+    print('working directory: ' + os.getcwd())
+    DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        shutil.rmtree('./data', ignore_errors=True)
+    # make huggingface cache dir point to custom location (to keep everything inside the project)
+    # used by sxdl and siglip model
+    os.makedirs('./huggingface_cache/hub', exist_ok=True)
+    os.environ['HF_HOME'] = os.getcwd() + '/huggingface_cache'
+    os.environ['HF_HUB_CACHE'] = os.environ['HF_HOME'] + '/hub'
 
-        os.makedirs('./data/stage_0', exist_ok=True)
-        os.makedirs('./data/stage_1', exist_ok=True)
-        os.makedirs('./data/stage_1/players', exist_ok=True)
-        os.makedirs('./data/stage_1/players_no_pad', exist_ok=True)
-        os.makedirs('./data/stage_2a', exist_ok=True)
-        os.makedirs('./data/stage_2a/masks', exist_ok=True)
-        os.makedirs('./data/stage_2a/cropped_masks', exist_ok=True)
-        os.makedirs('./data/stage_2b', exist_ok=True)
-        os.makedirs('./data/stage_2b/team_0', exist_ok=True)
-        os.makedirs('./data/stage_2b/team_1', exist_ok=True)
-        os.makedirs('./data/stage_3', exist_ok=True)
-        os.makedirs('./data/stage_4', exist_ok=True)
+    # ignore proxies
+    os.environ['HTTP_PROXY'] = ''
+    os.environ['http_proxy'] = ''
+    os.environ['HTTPS_PROXY'] = ''
+    os.environ['https_proxy'] = ''
 
-    def start(self, input_image: Image.Image, team1: str, team2: str):
-        print('Starting pipeline...')
+    # download roboflow model and loras from google drive if not present
+    if not os.path.isfile('./roboflow_model/best.pt'):
+        gdown.download(id='103DgLujAKKLlfETz-rgDO0-ibvQh7evQ', output='./roboflow_model/best.pt')
+    if not os.path.isdir('./sdxl_lora_weights'):
+        gdown.download_folder(id='1VvzOiPwhkv7fuK7P3IktuEzuXdnKg3Le', output='./sdxl_lora_weights')
 
-        ## STAGE 0
-        # preparazione dell'ambiente prima dell'esecuzione dei modelli della pipeline
+    # initialize models not to waste time and memory every time
+    ROBOFLOW_DETECTION_MODEL = YOLO("roboflow_model/best.pt")                  # pretrained Roboflow YOLO model (training_model_1.ipynb)
+    SAM2_SEGMENT_MODEL = SAM("sam2_model/sam2_t.pt")                           # SAM2 tiny model (good quality and speed)
+    TEAM_CLASSIFIER_MODEL = TeamClassifier(device=DEVICE)                 # Roboflow all-in-one Team Classifier model
+    SDXL_INPAINTING_PIPELINE = AutoPipelineForInpainting.from_pretrained(      # SDXL inpainting model
+        "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
+        #torch_dtype=torch.float16,
+        use_safetensors=True
+    )
+    # load team lora weights on sdxl model
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqjvnts", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqjvnts")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqfrntn", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqfrntn")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqntrxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqntrxx")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqmlnxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqmlnxx")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqnplxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqnplxx")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqrmxxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqrmxxx")
 
-        # clean data directory
-        self.clean_data_dir()
+    INITIALIZED = True
 
-        # translate team codes
-        team_dict = { 'Juventus': 'sqjvnts', 'Fiorentina': 'sqfrntn', 'Inter': 'sqntrxx', 'Milan': 'sqmlnxx', 'Napoli': 'sqnplxx', 'Roma': 'sqrmxxx' }
-        team1_code = team_dict[team1]
-        team2_code = team_dict[team2]
+def clean_data_dir():
+    print('Cleaning data directory...')
 
-        # setup env var
-        print('working directory: ' + os.getcwd())
-        my_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    shutil.rmtree('./data', ignore_errors=True)
 
-        # save input image
-        input_image = input_image.convert('RGB')
-        input_image.save(fp=f"data/stage_0/input_image.jpg")
+    os.makedirs('./data/stage_0', exist_ok=True)
+    os.makedirs('./data/stage_1', exist_ok=True)
+    os.makedirs('./data/stage_1/players', exist_ok=True)
+    os.makedirs('./data/stage_1/players_no_pad', exist_ok=True)
+    os.makedirs('./data/stage_2a', exist_ok=True)
+    os.makedirs('./data/stage_2a/masks', exist_ok=True)
+    os.makedirs('./data/stage_2a/cropped_masks', exist_ok=True)
+    os.makedirs('./data/stage_2b', exist_ok=True)
+    os.makedirs('./data/stage_2b/team_0', exist_ok=True)
+    os.makedirs('./data/stage_2b/team_1', exist_ok=True)
+    os.makedirs('./data/stage_3', exist_ok=True)
+    os.makedirs('./data/stage_4', exist_ok=True)
 
-        # ----------------------------
+@celery.task
+def start_new_task(image_base64: bytes, team1: str, team2: str):
+    print('Starting pipeline task...')
 
-        ## STAGE 1
-        # questo modello trova i giocatori nell'immagine di partenza, crea le bounding box e ritaglia le immagini dei singoli giocatori
+    ## STAGE 0
+    # preparazione dell'ambiente prima dell'esecuzione dei modelli della pipeline
 
-        # Run batched inference on input image
-        result_stage_1 = self.ROBOFLOW_DETECTION_MODEL(input_image)[0]
+    # clean data directory
+    clean_data_dir()
 
-        # Process result and save
-        boxes = result_stage_1.boxes.xyxy                   # bounding boxes (tensor)
-        classes = result_stage_1.boxes.cls.tolist()         # class of each bounding box
-        result_stage_1.save(filename=f"data/stage_1/result.jpg")
+    # translate team codes
+    team_dict = { 'Juventus': 'sqjvnts', 'Fiorentina': 'sqfrntn', 'Inter': 'sqntrxx', 'Milan': 'sqmlnxx', 'Napoli': 'sqnplxx', 'Roma': 'sqrmxxx' }
+    team1_code = team_dict[team1]
+    team2_code = team_dict[team2]
 
-        # Crop players from images (filter out referees, goalkeepers and balls) with and without padding
-        pad = 50
-        i = 0
-        for b in boxes:
-            if classes[i] == 2:       # only players
-                b = b.tolist()
-                im = input_image.crop((b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad))
-                im.save(f"data/stage_1/players/player_{i}.jpg")
-                im_no_pad = input_image.crop(b)
-                im_no_pad.save(f"data/stage_1/players_no_pad/player_{i}.jpg")
+    # save input image
+    input_image = base64_to_PIL(image_base64).convert('RGB')
+    input_image.save(fp=f"data/stage_0/input_image.jpg")
+
+    # ----------------------------
+
+    ## STAGE 1
+    # questo modello trova i giocatori nell'immagine di partenza, crea le bounding box e ritaglia le immagini dei singoli giocatori
+
+    # Run batched inference on input image
+    result_stage_1 = ROBOFLOW_DETECTION_MODEL(input_image)[0]
+
+    # Process result and save
+    boxes = result_stage_1.boxes.xyxy                   # bounding boxes (tensor)
+    classes = result_stage_1.boxes.cls.tolist()         # class of each bounding box
+    result_stage_1.save(filename=f"data/stage_1/result.jpg")
+
+    # Crop players from images (filter out referees, goalkeepers and balls) with and without padding
+    pad = 50
+    i = 0
+    for b in boxes:
+        if classes[i] == 2:       # only players
+            b = b.tolist()
+            im = input_image.crop((b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad))
+            im.save(f"data/stage_1/players/player_{i}.jpg")
+            im_no_pad = input_image.crop(b)
+            im_no_pad.save(f"data/stage_1/players_no_pad/player_{i}.jpg")
+        i += 1
+
+    # ----------------------------
+
+    ## STAGE 2a
+    # questo modello, guidato dalle bounding box fornite dal modello precedente, crea le maschere dei giocatori in due versioni: immagine integrale e ritagliata a bounding box
+
+    # Run inference on input_image: segment inside bounding boxes
+    i = 0
+    result_stage_2a = SAM2_SEGMENT_MODEL(input_image, bboxes=copy.deepcopy(boxes))[0]     # deep copy to avoid array "contamination"
+
+    # Process result
+    i = 0
+    for m in result_stage_2a.masks:
+        if classes[i] == 2:       # only players
+            mfile = Image.fromarray((m.data.cpu().numpy().squeeze() * 255).astype(np.uint8)).convert('L')   # create mask image
+            mfile.save(fp=f"data/stage_2a/masks/mask_{i}.jpg")                                               # save to disk
+            b = boxes[i].tolist()
+            cmfile = mfile.crop((b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad))                           # create cropped mask image                                                                          # display to screen
+            cmfile.save(fp=f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg")                              # save to disk
+        i += 1
+
+    # ----------------------------
+
+    ## STAGE 2b
+    # questo modello prima impara autonomamente le differenze tra le due squadre e poi divide i giocatori nei due gruppi
+
+    # load player crops
+    i = 0
+    players_crops = []
+    for b in boxes:
+        if not os.path.isfile(f"data/stage_1/players_no_pad/player_{i}.jpg"):      # only players (other classes' images haven't been processed, so skip them)
             i += 1
+            continue
+        im = Image.open(f"data/stage_1/players_no_pad/player_{i}.jpg")
+        players_crops.append(np.asarray(im))
+        i += 1
 
-        # ----------------------------
+    # fit TeamClassifier
+    TEAM_CLASSIFIER_MODEL.fit(players_crops)
 
-        ## STAGE 2a
-        # questo modello, guidato dalle bounding box fornite dal modello precedente, crea le maschere dei giocatori in due versioni: immagine integrale e ritagliata a bounding box
+    # predict teams
+    team_ids = list(TEAM_CLASSIFIER_MODEL.predict(players_crops))
+    print('team_ids: ' + str(team_ids))
 
-        # Run inference on input_image: segment inside bounding boxes
-        i = 0
-        result_stage_2a = self.SAM2_SEGMENT_MODEL(input_image, bboxes=copy.deepcopy(boxes))[0]     # deep copy to avoid array "contamination"
+    # fill list with holes (goalkeepers, referees, ball) to pass correct indices to next steps
+    i = 0
+    for b in boxes:
+        if not os.path.isfile(f"data/stage_1/players_no_pad/player_{i}.jpg"):
+            team_ids.insert(i, None)
+        i += 1
+    print('team_ids (filled): \n' + '\n'.join([f'subject {i}\'s team: {t}' for (i, t) in enumerate(team_ids)]))
 
-        # Process result
-        i = 0
-        for m in result_stage_2a.masks:
-            if classes[i] == 2:       # only players
-                mfile = Image.fromarray((m.data.cpu().numpy().squeeze() * 255).astype(np.uint8)).convert('L')   # create mask image
-                mfile.save(fp=f"data/stage_2a/masks/mask_{i}.jpg")                                               # save to disk
-                b = boxes[i].tolist()
-                cmfile = mfile.crop((b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad))                           # create cropped mask image                                                                          # display to screen
-                cmfile.save(fp=f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg")                              # save to disk
+    # save player crops to corresponding team folder to help debugging
+    i = 0
+    for b in boxes:
+        if not os.path.isfile(f"data/stage_1/players_no_pad/player_{i}.jpg"):      # only players (other classes' images haven't been processed, so skip them)
             i += 1
+            continue
+        im = Image.open(f"data/stage_1/players_no_pad/player_{i}.jpg")
+        im.save(fp=f"data/stage_2b/team_{team_ids[i]}/player_{i}.jpg")
+        i += 1
 
-        # ----------------------------
+    # DEBUG
+    #return input_image
 
-        ## STAGE 2b
-        # questo modello prima impara autonomamente le differenze tra le due squadre e poi divide i giocatori nei due gruppi
+    # ----------------------------
 
-        # load player crops
-        i = 0
-        players_crops = []
-        for b in boxes:
-            if not os.path.isfile(f"data/stage_1/players_no_pad/player_{i}.jpg"):      # only players (other classes' images haven't been processed, so skip them)
-                i += 1
-                continue
-            im = Image.open(f"data/stage_1/players_no_pad/player_{i}.jpg")
-            players_crops.append(np.asarray(im))
-            i += 1
-
-        # fit TeamClassifier
-        self.TEAM_CLASSIFIER_MODEL.fit(players_crops)
-
-        # predict teams
-        team_ids = list(self.TEAM_CLASSIFIER_MODEL.predict(players_crops))
-        print('team_ids: ' + str(team_ids))
-
-        # fill list with holes (goalkeepers, referees, ball) to pass correct indices to next steps
-        i = 0
-        for b in boxes:
-            if not os.path.isfile(f"data/stage_1/players_no_pad/player_{i}.jpg"):
-                team_ids.insert(i, None)
-            i += 1
-        print('team_ids (filled): \n' + '\n'.join([f'subject {i}\'s team: {t}' for (i, t) in enumerate(team_ids)]))
-
-        # save player crops to corresponding team folder to help debugging
-        i = 0
-        for b in boxes:
-            if not os.path.isfile(f"data/stage_1/players_no_pad/player_{i}.jpg"):      # only players (other classes' images haven't been processed, so skip them)
-                i += 1
-                continue
-            im = Image.open(f"data/stage_1/players_no_pad/player_{i}.jpg")
-            im.save(fp=f"data/stage_2b/team_{team_ids[i]}/player_{i}.jpg")
-            i += 1
-
-        # DEBUG
-        #return input_image
-
-        # ----------------------------
-
-        ## STAGE 3
-        # questo modello, a partire dalle immagini ritagliate dei giocatori e alle rispettive maschere, ridisegna i giocatori (inpainting) usando le squadre fornite dall'utente
-        # da repo nikgli, sdxl-inpainting-lora.py: "this script is for doing inpainting on the sd/sdxl inpainting model with lora weights"
-        
-        # inner function to dilate a mask image
-        def dilated_mask(mask, dilate_iterations = 6):
-            return (
-                Image.fromarray(
-                    cv.cvtColor(
-                        np.array(
-                            cv.dilate(
-                                cv.cvtColor(
-                                    np.array(
-                                        mask
-                                    ),
-                                    cv.COLOR_RGB2BGR
+    ## STAGE 3
+    # questo modello, a partire dalle immagini ritagliate dei giocatori e alle rispettive maschere, ridisegna i giocatori (inpainting) usando le squadre fornite dall'utente
+    # da repo nikgli, sdxl-inpainting-lora.py: "this script is for doing inpainting on the sd/sdxl inpainting model with lora weights"
+    
+    # inner function to dilate a mask image
+    def dilated_mask(mask, dilate_iterations = 6):
+        return (
+            Image.fromarray(
+                cv.cvtColor(
+                    np.array(
+                        cv.dilate(
+                            cv.cvtColor(
+                                np.array(
+                                    mask
                                 ),
-                                np.ones((5,5), np.uint8),
-                                iterations=dilate_iterations
-                            )
-                        ),
-                        cv.COLOR_BGR2RGB
-                    )
+                                cv.COLOR_RGB2BGR
+                            ),
+                            np.ones((5,5), np.uint8),
+                            iterations=dilate_iterations
+                        )
+                    ),
+                    cv.COLOR_BGR2RGB
                 )
             )
-        
-        # Run inference (inpainting)
+        )
+    
+    # Run inference (inpainting)
 
-        prompt = f"ftbllplyr {team1_code}"
+    generator = torch.Generator(device=DEVICE).manual_seed(9)
+    output_inpaint_size = (1024, 1024)
+
+    i = 0
+    for player_box in boxes:
+        if not os.path.isfile(f"data/stage_1/players/player_{i}.jpg"):      # only players (other classes' images haven't been processed, so skip them)
+            i += 1
+            continue
+        
+        init_image = Image.open(f"data/stage_1/players/player_{i}.jpg").convert('RGB').resize((1024, 1024))     # load and resize player image
+        #init_image = Image.new("RGB", (1024, 1024), (15, 191, 88))     # se la qualità fa schifo, provare questa come input
+        mask_image = dilated_mask(Image.open(f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg").convert('L').resize(output_inpaint_size), 6) # load, dilate and resize mask
+        #mask_image = Image.new("L", (1024, 1024), 255)
+
+        team_code = team1_code if team_ids[i] == 0 else team2_code
+
+        # set prompt and adapter based on team classification
+        prompt = f"ftbllplyr {team_code}"
         negative_prompt = "orange pink red blue yellow brown green grey purple"
         #negative_prompt = "weird shape, unrealistic"
         #prompt = "soccer player, realistic, vertical striped jersey, vertical white stripes, vertical black stripes"
         #negative_prompt = "blurred, blur, unrealistic, distorted, unnatural pose, cartoon style, vector style, child, orange, red, blue, yellow, brown, green, grey, purple"
-        generator = torch.Generator(device=self.DEVICE).manual_seed(9)
-        output_inpaint_size = (1024, 1024)
-
-        i = 0
-        for player_box in boxes:
-            if not os.path.isfile(f"data/stage_1/players/player_{i}.jpg"):      # only players (other classes' images haven't been processed, so skip them)
-                i += 1
-                continue
-            init_image = Image.open(f"data/stage_1/players/player_{i}.jpg").convert('RGB').resize((1024, 1024))     # load and resize player image
-            #init_image = Image.new("RGB", (1024, 1024), (15, 191, 88))
-            mask_image = dilated_mask(Image.open(f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg").convert('L').resize(output_inpaint_size), 6) # load, dilate and resize mask
-            #mask_image = Image.new("L", (1024, 1024), 255)
-            team_code = team1_code if team_ids[i] == 0 else team2_code
-            self.SDXL_INPAINTING_PIPELINE.set_adapters(team_code)
-            image = self.SDXL_INPAINTING_PIPELINE(
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                image=init_image,
-                mask_image=mask_image,
-                guidance_scale=8.0,
-                num_inference_steps=30,
-                strength=0.99,
-                generator=generator,
-                width=output_inpaint_size[0],
-                height=output_inpaint_size[1]
-            ).images[0]                                             # inference (inpainting)
-            image.save(f"data/stage_3/result_{i}.jpg")              # save to disk
-            i += 1
-            ### SHORTCUT DEBUG
-            if(i >= 1):
-                break
-            ###
-
-        # ----------------------------
-
-        ## STAGE 4
-        # ricomposizione dell'immagine originale con i giocatori ridisegnati
+        SDXL_INPAINTING_PIPELINE.set_adapters(team_code)
         
-        # Apri l'immagine di sfondo
-        general_image = Image.open('data/stage_0/input_image.jpg')
-        i = 0
-        for player_box in boxes:
-            # round box coordinates and convert to list
-            player_box = [round(b) for b in player_box.tolist()]     
-            # Apri l'immagine da incollare e la maschera per ritagliarla
-            player_image = Image.open(f"data/stage_3/result_{i}.jpg").resize((player_box[2] - player_box[0] + pad * 2, player_box[3] - player_box[1] + pad * 2))
-            mask_image = dilated_mask(Image.open(f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg").resize((player_box[2] - player_box[0] + pad * 2, player_box[3] - player_box[1] + pad * 2)), 2).convert('L')
-            # Incolla l'immagine
-            general_image.paste(player_image, (player_box[0] - pad, player_box[1] - pad), mask_image)
-            i += 1
-            ### SHORTCUT DEBUG
-            if(i >= 2):
-                break
-            ###
-        # Salva l'immagine risultante
-        general_image.save(f"data/stage_4/result.jpg")
+        image = SDXL_INPAINTING_PIPELINE(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            image=init_image,
+            mask_image=mask_image,
+            guidance_scale=8.0,
+            num_inference_steps=30,
+            strength=0.99,
+            generator=generator,
+            width=output_inpaint_size[0],
+            height=output_inpaint_size[1]
+        ).images[0]                                             # inference (inpainting)
+        image.save(f"data/stage_3/result_{i}.jpg")              # save to disk
+        i += 1
+        ### SHORTCUT DEBUG
+        if(i >= 1):
+            break
+        ###
 
-        ### per liberare memoria   DA FARE
-        #del boxes, masks ecc...
+    # ----------------------------
 
-        return general_image
+    ## STAGE 4
+    # ricomposizione dell'immagine originale con i giocatori ridisegnati
+    
+    # Apri l'immagine di sfondo
+    general_image = Image.open('data/stage_0/input_image.jpg')
+    i = 0
+    for player_box in boxes:
+        # round box coordinates and convert to list
+        player_box = [round(b) for b in player_box.tolist()]     
+        # Apri l'immagine da incollare e la maschera per ritagliarla
+        player_image = Image.open(f"data/stage_3/result_{i}.jpg").resize((player_box[2] - player_box[0] + pad * 2, player_box[3] - player_box[1] + pad * 2))
+        mask_image = dilated_mask(Image.open(f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg").resize((player_box[2] - player_box[0] + pad * 2, player_box[3] - player_box[1] + pad * 2)), 2).convert('L')
+        # Incolla l'immagine
+        general_image.paste(player_image, (player_box[0] - pad, player_box[1] - pad), mask_image)
+        i += 1
+        ### SHORTCUT DEBUG
+        if(i >= 2):
+            break
+        ###
+    # Salva l'immagine risultante
+    general_image.save(f"data/stage_4/result.jpg")
+
+    ### per liberare memoria   DA FARE
+    #del boxes, masks ecc...
+
+    return general_image
