@@ -15,6 +15,11 @@ export default function InputPanel(props: InputPanelProps) {
 
     const [file, setFile] = useState<File>();
     const [image, setImage] = useState(null);
+    const [processing, setProcessing] = useState(false);
+
+    props.modelApi.onProcessStart.push(onStartProcessing);
+    props.modelApi.onProcessEndWithSuccess.push(onEndProcessing);
+    props.modelApi.onProcessError.push(onErrorProcessing);
 
     function onFileChange(e: ChangeEvent<HTMLInputElement>) {
         if (!e.target.files)
@@ -34,7 +39,19 @@ export default function InputPanel(props: InputPanelProps) {
     }
 
     function onProcessClick() {
-        props.modelApi.processImage();
+        props.modelApi.startImageProcessing();
+    }
+
+    function onStartProcessing() {
+        setProcessing(true);
+    }
+
+    function onEndProcessing() {
+        setProcessing(false);
+    }
+
+    function onErrorProcessing() {
+        setProcessing(false);
     }
 
     return (
@@ -46,7 +63,7 @@ export default function InputPanel(props: InputPanelProps) {
                     <Form.Control type='file' accept=".jpg, .png, .jpeg, .gif, .bmp, .tif, .tiff|image/*" onChange={onFileChange} />
                 </Col>
                 <Col xs={3}>
-                    <Button type='button' className='btn btn-primary' disabled={!image} onClick={onProcessClick}>Processa!</Button>
+                    <Button type='button' className='btn btn-primary' disabled={!image || processing} onClick={onProcessClick}>Processa!</Button>
                 </Col>
             </Row>
         </Container>
