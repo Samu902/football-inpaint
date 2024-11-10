@@ -15,18 +15,28 @@ export default function OutputPanel(props: OutputPanelProps) {
 
     const [image, setImage] = useState(null);
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState(false);
 
-    props.modelApi.onProcessStart = onImageStarted;
-    props.modelApi.onProcessEnd = onImageCompleted;
+    props.modelApi.onProcessStart.push(onImageStarted);
+    props.modelApi.onProcessEndWithSuccess.push(onImageCompleted);
+    props.modelApi.onProcessError.push(onImageError);
 
     function onImageStarted() {
         setImage(null);
         setProcessing(true);
+        setError(false);
     }
     
     function onImageCompleted(outputImage: string | ArrayBuffer) {
         setProcessing(false);
+        setError(false);
         setImage(outputImage);
+    }
+
+    function onImageError(error: string) {
+        setImage(null);
+        setProcessing(false);
+        setError(true);
     }
 
     return (
@@ -41,6 +51,12 @@ export default function OutputPanel(props: OutputPanelProps) {
                         <Spinner animation="border" role="status" size='sm'>
                             <span className="visually-hidden">Loading...</span>
                         </Spinner>
+                    </div>
+                }
+                {
+                    error &&
+                    <div className='position-absolute top-50 start-50 translate-middle'>
+                        <p className='text-danger'>Errore durante l'elaborazione!</p>
                     </div>
                 }
             </div>
