@@ -1,8 +1,7 @@
 from flask import Flask, request, jsonify, send_file
 from PIL import Image
-import traceback
 import pipeline
-from my_util import PIL_to_base64
+from my_util import PIL_to_base64, base64_to_PIL, log_exc_to_file
 
 app = Flask(__name__)
 
@@ -49,30 +48,35 @@ def process_image_start():
         image_base64 = PIL_to_base64(Image.open(input_image.stream))
         task = pipeline.start_new_task.delay(image_base64, team1, team2)
     except Exception as e:
-        with open('app.log', 'w+') as f:
-            traceback.print_exc(file=f)
+        log_exc_to_file()
         return jsonify({'error': str(e)}), 500, cors_headers
 
     return jsonify({'info': 'Your image processing request was enqueued successfully', 'task_id': task.id}), 202, cors_headers
 
 @app.route('/process-image/update/<task_id>', methods=['GET'])
 def process_image_update(task_id):
-    task = pipeline.celery.AsyncResult(task_id)
-    if task.state == 'PENDING':
-        return jsonify({'status': 'Task is pending...'}), 202, cors_headers
-    elif task.state == 'PROGRESS':
-        return jsonify({'status': 'Task is in progress...'}), 202, cors_headers
-    elif task.state == 'SUCCESS':
-        return jsonify({'status': 'Task finished successfully, please call /finalize to get your result.'}), 200, cors_headers
-    elif task.state == 'FAILURE':
-        return jsonify({'status': 'Task failed for the following reason:\n' + str(task.traceback)}), 500, cors_headers
-    else:
-        return jsonify({'status': 'Unknown state...'}), 202, cors_headers
+    try:
+        task = pipeline.celery.AsyncResult(task_id)
+        if task.state == 'PENDING':
+            return jsonify({'status': 'Task is pending...'}), 202, cors_headers
+        elif task.state == 'PROGRESS':
+            return jsonify({'status': 'Task is in progress...'}), 202, cors_headers
+        elif task.state == 'SUCCESS':
+            return jsonify({'status': 'Task finished successfully, please call /finalize to get your result.'}), 200, cors_headers
+        elif task.state == 'FAILURE':
+            with open('app.log', 'w+') as f:
+                f.write(task.traceback)
+            return jsonify({'status': 'Task failed for the following reason', 'error': str(task.traceback)}), 500, cors_headers
+        else:
+            return jsonify({'status': 'Unknown state...'}), 202, cors_headers
+    except Exception as e:
+        log_exc_to_file()
+        return jsonify({'error': str(e)}), 500, cors_headers
 
 @app.route('/process-image/finalize/<task_id>', methods=['GET'])
 def process_image_finalize(task_id):
     try:
-        processed_image = pipeline.celery.AsyncResult(task_id).info
+        processed_image = base64_to_PIL(pipeline.celery.AsyncResult(task_id).info)
         processed_image.save(fp='./last_processed.png')
         return send_file(
             './last_processed.png',
@@ -81,8 +85,7 @@ def process_image_finalize(task_id):
             download_name='processed_image.png'
         ), 200, cors_headers
     except Exception as e:
-        with open('app.log', 'w+') as f:
-            traceback.print_exc(file=f)
+        log_exc_to_file()
         return jsonify({'error': str(e)}), 500, cors_headers
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@
 import os
 import shutil
 import gdown
-from my_util import base64_to_PIL
+from my_util import base64_to_PIL, PIL_to_base64
 
 # stage 1
 from ultralytics import YOLO
@@ -110,7 +110,7 @@ def clean_data_dir():
     os.makedirs('./data/stage_4', exist_ok=True)
 
 @celery.task
-def start_new_task(image_base64: bytes, team1: str, team2: str):
+def start_new_task(image_base64: str, team1: str, team2: str):
     print('Starting pipeline task...')
 
     ## STAGE 0
@@ -317,4 +317,4 @@ def start_new_task(image_base64: bytes, team1: str, team2: str):
     ### per liberare memoria   DA FARE
     #del boxes, masks ecc...
 
-    return general_image
+    return PIL_to_base64(general_image)
