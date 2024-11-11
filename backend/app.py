@@ -89,6 +89,4 @@ def process_image_finalize(task_id):
         return jsonify({'error': str(e)}), 500, cors_headers
 
 if __name__ == '__main__':
-    if not pipeline.INITIALIZED:
-        pipeline.init_enviroment()
     app.run(debug=True, port=5000, host='0.0.0.0')

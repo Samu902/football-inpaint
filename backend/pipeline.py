@@ -33,21 +33,7 @@ celery = Celery(
 )
 #celery -A pipeline.celery worker --loglevel=INFO
 
-DEVICE = None
-ROBOFLOW_DETECTION_MODEL = None
-SAM2_SEGMENT_MODEL = None
-TEAM_CLASSIFIER_MODEL = None
-SDXL_INPAINTING_PIPELINE = None
-INITIALIZED = False
-
 def init_enviroment():
-    global DEVICE
-    global ROBOFLOW_DETECTION_MODEL
-    global SAM2_SEGMENT_MODEL
-    global TEAM_CLASSIFIER_MODEL
-    global SDXL_INPAINTING_PIPELINE
-    global INITIALIZED
-
     print('Initializing pipeline environment...')
 
     # setup env var
@@ -89,9 +75,6 @@ def init_enviroment():
     SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqnplxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqnplxx")
     SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqrmxxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqrmxxx")
 
-    INITIALIZED = True
-
-def clean_data_dir():
     print('Cleaning data directory...')
 
     shutil.rmtree('./data', ignore_errors=True)
@@ -109,6 +92,8 @@ def clean_data_dir():
     os.makedirs('./data/stage_3', exist_ok=True)
     os.makedirs('./data/stage_4', exist_ok=True)
 
+    return (DEVICE, ROBOFLOW_DETECTION_MODEL, SAM2_SEGMENT_MODEL, TEAM_CLASSIFIER_MODEL, SDXL_INPAINTING_PIPELINE)
+
 @celery.task
 def start_new_task(image_base64: str, team1: str, team2: str):
     print('Starting pipeline task...')
@@ -116,8 +101,8 @@ def start_new_task(image_base64: str, team1: str, team2: str):
     ## STAGE 0
     # preparazione dell'ambiente prima dell'esecuzione dei modelli della pipeline
 
-    # clean data directory
-    clean_data_dir()
+    # init_environment
+    DEVICE, ROBOFLOW_DETECTION_MODEL, SAM2_SEGMENT_MODEL, TEAM_CLASSIFIER_MODEL, SDXL_INPAINTING_PIPELINE = init_enviroment()
 
     # translate team codes
     team_dict = { 'Juventus': 'sqjvnts', 'Fiorentina': 'sqfrntn', 'Inter': 'sqntrxx', 'Milan': 'sqmlnxx', 'Napoli': 'sqnplxx', 'Roma': 'sqrmxxx' }
@@ -215,7 +200,7 @@ def start_new_task(image_base64: str, team1: str, team2: str):
         i += 1
 
     # DEBUG
-    #return input_image
+    return PIL_to_base64(input_image)
 
     # ----------------------------
 
