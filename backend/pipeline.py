@@ -42,8 +42,8 @@ def init_enviroment():
 
     # make huggingface cache dir point to custom location (to keep everything inside the project)
     # used by sxdl and siglip model
-    os.makedirs('./huggingface_cache/hub', exist_ok=True)
-    os.environ['HF_HOME'] = os.getcwd() + '/huggingface_cache'
+    os.makedirs('./models/huggingface_cache/hub', exist_ok=True)
+    os.environ['HF_HOME'] = os.getcwd() + '/models/huggingface_cache'
     os.environ['HF_HUB_CACHE'] = os.environ['HF_HOME'] + '/hub'
 
     # ignore proxies
@@ -53,14 +53,14 @@ def init_enviroment():
     os.environ['https_proxy'] = ''
 
     # download roboflow model and loras from google drive if not present
-    if not os.path.isfile('./roboflow_model/best.pt'):
+    if not os.path.isfile('./models/roboflow_model/best.pt'):
         gdown.download(id='103DgLujAKKLlfETz-rgDO0-ibvQh7evQ', output='./roboflow_model/best.pt')
-    if not os.path.isdir('./sdxl_lora_weights'):
+    if not os.path.isdir('./models/sdxl_lora_weights'):
         gdown.download_folder(id='1VvzOiPwhkv7fuK7P3IktuEzuXdnKg3Le', output='./sdxl_lora_weights')
 
     # initialize models not to waste time and memory every time
-    ROBOFLOW_DETECTION_MODEL = YOLO("roboflow_model/best.pt")                  # pretrained Roboflow YOLO model (training_model_1.ipynb)
-    SAM2_SEGMENT_MODEL = SAM("sam2_model/sam2_t.pt")                           # SAM2 tiny model (good quality and speed)
+    ROBOFLOW_DETECTION_MODEL = YOLO("models/roboflow_model/best.pt")                  # pretrained Roboflow YOLO model (training_model_1.ipynb)
+    SAM2_SEGMENT_MODEL = SAM("models/sam2_model/sam2_t.pt")                           # SAM2 tiny model (good quality and speed)
     TEAM_CLASSIFIER_MODEL = TeamClassifier(device=DEVICE)                 # Roboflow all-in-one Team Classifier model
     SDXL_INPAINTING_PIPELINE = AutoPipelineForInpainting.from_pretrained(      # SDXL inpainting model
         "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
@@ -68,12 +68,12 @@ def init_enviroment():
         use_safetensors=True
     )
     # load team lora weights on sdxl model
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqjvnts", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqjvnts")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqfrntn", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqfrntn")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqntrxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqntrxx")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqmlnxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqmlnxx")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqnplxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqnplxx")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./sdxl_lora_weights/sqrmxxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqrmxxx")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqjvnts", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqjvnts")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqfrntn", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqfrntn")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqntrxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqntrxx")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqmlnxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqmlnxx")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqnplxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqnplxx")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqrmxxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqrmxxx")
 
     print('Cleaning data directory...')
 
