@@ -1,15 +1,20 @@
 import base64
 from io import BytesIO
 from PIL import Image
+import traceback
 
 def PIL_to_base64(img: Image.Image):
+    img_bytes = BytesIO()
     img = img.convert('RGB')
-    im_file = BytesIO()
-    img.save(im_file, format="JPEG")
-    im_bytes = im_file.getvalue()               # im_bytes: image in binary format.
-    return base64.b64encode(im_bytes)
+    img.save(img_bytes, format='JPEG')
+    img_bytes = img_bytes.getvalue()
+    b64_str = base64.b64encode(img_bytes).decode('utf-8')
+    return b64_str
 
-def base64_to_PIL(b64: bytes):
-    im_bytes = base64.b64decode(b64)         # im_bytes is a binary image
-    im_file = BytesIO(im_bytes)                 # convert image to file-like object
-    return Image.open(im_file)                  # img is now PIL Image object
+def base64_to_PIL(b64_str: str):
+    img_bytes = base64.b64decode(b64_str)
+    return Image.open(BytesIO(img_bytes))
+
+def log_exc_to_file():
+    with open('app.log', 'w+') as f:
+        traceback.print_exc(file=f)
