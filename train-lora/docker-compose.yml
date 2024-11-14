@@ -1,0 +1,15 @@
+services:
+    football-inpaint:
+        image: football-inpaint
+        container_name: football-inpaint
+        restart: always
+        build:
+            context: .
+            network: host
+            dockerfile: Dockerfile
+        ports:
+            - "6001:80"
+            - "5002:5002"
+        volumes:
+            - ./var/log:/var/log/nginx
+            - ./backend/models:/usr/share/nginx/html/backend/models
