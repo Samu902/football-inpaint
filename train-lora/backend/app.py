@@ -25,35 +25,35 @@ def home():
     except Exception as e:
         return jsonify({'error': str(e)}), 500, cors_headers
 
-@app.route('/process-image/start', methods=['POST'])
+@app.route('/process-lora/start', methods=['POST'])
 def process_image_start():
 
-    if 'input_image' not in request.files:
-        return jsonify({'error': 'No input image'}), 500, cors_headers
+    if 'input_file' not in request.files:
+        return jsonify({'error': 'No input .zip file'}), 500, cors_headers
     
-    if not request.form.get('team1'):
-        return jsonify({'error': 'No team 1'}), 500, cors_headers
+    if not request.form.get('team'):
+        return jsonify({'error': 'No team'}), 500, cors_headers
     
-    if not request.form.get('team2'):
-        return jsonify({'error': 'No team 2'}), 500, cors_headers
+    if not request.form.get('steps'):
+        return jsonify({'error': 'No steps'}), 500, cors_headers
     
-    input_image = request.files['input_image']
-    team1 = request.form.get('team1')
-    team2 = request.form.get('team2')
+    input_file = request.files['input_file']
+    team = request.form.get('team')
+    steps = request.form.get('steps')
     
-    if input_image.filename == '':
+    if input_file.filename == '':
         return jsonify({'error': 'No selected file'}), 500, cors_headers
 
     try:
-        image_base64 = PIL_to_base64(Image.open(input_image.stream))
-        task = pipeline.start_new_task.delay(image_base64, team1, team2)
+        zip_file = None#PIL_to_base64(Image.open(input_file.stream))    DA RIVEDERE
+        task = pipeline.start_new_task.delay(zip_file, team, steps)
     except Exception as e:
         log_exc_to_file()
         return jsonify({'error': str(e)}), 500, cors_headers
 
-    return jsonify({'info': 'Your image processing request was enqueued successfully', 'task_id': task.id}), 202, cors_headers
+    return jsonify({'info': 'Your lora training request was enqueued successfully', 'task_id': task.id}), 202, cors_headers
 
-@app.route('/process-image/update/<task_id>', methods=['GET'])
+@app.route('/process-lora/update/<task_id>', methods=['GET'])
 def process_image_update(task_id):
     try:
         task = pipeline.celery.AsyncResult(task_id)
@@ -73,9 +73,10 @@ def process_image_update(task_id):
         log_exc_to_file()
         return jsonify({'error': str(e)}), 500, cors_headers
 
-@app.route('/process-image/finalize/<task_id>', methods=['GET'])
+@app.route('/process-lora/finalize/<task_id>', methods=['GET'])
 def process_image_finalize(task_id):
     try:
+        # TUTTO DA RIVEDERE
         processed_image = base64_to_PIL(pipeline.celery.AsyncResult(task_id).info)
         processed_image.save(fp='./last_processed.png')
         return send_file(
