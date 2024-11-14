@@ -89,4 +89,4 @@ def process_image_finalize(task_id):
         return jsonify({'error': str(e)}), 500, cors_headers
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    app.run(debug=True, port=5001, host='0.0.0.0')

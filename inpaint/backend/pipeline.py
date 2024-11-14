@@ -59,14 +59,14 @@ def init_enviroment():
         gdown.download_folder(id='1VvzOiPwhkv7fuK7P3IktuEzuXdnKg3Le', output='./sdxl_lora_weights')
 
     # initialize models not to waste time and memory every time
-    ROBOFLOW_DETECTION_MODEL = YOLO("models/roboflow_model/best.pt")                  # pretrained Roboflow YOLO model (training_model_1.ipynb)
-    SAM2_SEGMENT_MODEL = SAM("models/sam2_model/sam2_t.pt")                           # SAM2 tiny model (good quality and speed)
-    TEAM_CLASSIFIER_MODEL = TeamClassifier(device=DEVICE)                 # Roboflow all-in-one Team Classifier model
-    SDXL_INPAINTING_PIPELINE = AutoPipelineForInpainting.from_pretrained(      # SDXL inpainting model
+    ROBOFLOW_DETECTION_MODEL = YOLO("models/roboflow_model/best.pt")            # pretrained Roboflow YOLO model (training_model_1.ipynb)
+    SAM2_SEGMENT_MODEL = SAM("models/sam2_model/sam2_t.pt")                     # SAM2 tiny model (good quality and speed)
+    TEAM_CLASSIFIER_MODEL = TeamClassifier(device=DEVICE)                       # Roboflow all-in-one Team Classifier model
+    SDXL_INPAINTING_PIPELINE = AutoPipelineForInpainting.from_pretrained(       # SDXL inpainting model
         "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
         #torch_dtype=torch.float16,
         use_safetensors=True
-    )
+    ).to(DEVICE)
     # load team lora weights on sdxl model
     SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqjvnts", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqjvnts")
     SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqfrntn", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqfrntn")
@@ -165,20 +165,28 @@ def start_new_task(image_base64: str, team1: str, team2: str):
 
     # load player crops
     i = 0
-    players_crops = []
+    train_players_crops = []
+    predict_player_crops = []
     for b in boxes:
         if not os.path.isfile(f"data/stage_1/players_no_pad/player_{i}.jpg"):      # only players (other classes' images haven't been processed, so skip them)
             i += 1
             continue
         im = Image.open(f"data/stage_1/players_no_pad/player_{i}.jpg")
-        players_crops.append(np.asarray(im))
+        train_players_crops.append(np.asarray(im))
+        #train_players_crops.append(np.asarray(im.transpose(method=Image.Transpose.FLIP_LEFT_RIGHT)))
+        #train_players_crops.append(np.asarray(im.transpose(method=Image.Transpose.FLIP_TOP_BOTTOM)))
+        #train_players_crops.append(np.asarray(im.transpose(method=Image.Transpose.ROTATE_90)))
+        #train_players_crops.append(np.asarray(im.transpose(method=Image.Transpose.ROTATE_180)))
+        #train_players_crops.append(np.asarray(im.transpose(method=Image.Transpose.ROTATE_270)))
+        predict_player_crops.append(np.asarray(im))
         i += 1
+    #train_players_crops = train_players_crops * 4
 
     # fit TeamClassifier
-    TEAM_CLASSIFIER_MODEL.fit(players_crops)
+    TEAM_CLASSIFIER_MODEL.fit(train_players_crops)
 
     # predict teams
-    team_ids = list(TEAM_CLASSIFIER_MODEL.predict(players_crops))
+    team_ids = list(TEAM_CLASSIFIER_MODEL.predict(predict_player_crops))
     print('team_ids: ' + str(team_ids))
 
     # fill list with holes (goalkeepers, referees, ball) to pass correct indices to next steps

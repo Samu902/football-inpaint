@@ -1,7 +1,7 @@
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import path from 'path';
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 
 var config: any = {
     entry: './src/index.tsx',

@@ -5,9 +5,11 @@ services:
         restart: always
         build:
             context: .
+            network: host
             dockerfile: Dockerfile
         ports:
-            - "6283:80"
+            - "6001:80"
+            - "5001:5001"
         volumes:
             - ./var/log:/var/log/nginx
             - ./backend/models:/usr/share/nginx/html/backend/models

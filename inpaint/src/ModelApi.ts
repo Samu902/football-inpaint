@@ -4,7 +4,7 @@ export default class ModelApi {
     team2: string = 'Juventus';
     inputImage: File = null;
 
-    host: string = 'http://localhost:5000';
+    host: string = 'http://localhost:5001';
 
     onProcessStart = [() => { return }];
     onProcessEndWithSuccess = [(outputImage: string | ArrayBuffer) => { return }];
@@ -32,6 +32,9 @@ export default class ModelApi {
                 method: 'POST',
                 body: null
             });
+
+            //SONO RIMASTO QUA!!!!!!!!! questo sopra va, quello sotto no --> provare sopra con una POST, se va allora il problema è nella mia api e non di collegamento
+            //Se mi rimane tempo, per la modelAPI potrei fare un Context al posto di prop
 
             const response = await fetch(this.host + '/process-image/start', {
                 method: 'POST',
