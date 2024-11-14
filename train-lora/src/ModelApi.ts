@@ -1,23 +1,23 @@
 export default class ModelApi {
     
-    team1: string = 'Juventus';
-    team2: string = 'Juventus';
-    inputImage: File = null;
-
-    host: string = 'http://localhost:5002';
+    inputFile: File = null;
+    team: string = null;
+    steps: number = 0;
 
     onProcessStart = [() => { return }];
-    onProcessEndWithSuccess = [(outputImage: string | ArrayBuffer) => { return }];
+    onProcessSuccess = [(outputFile: string | ArrayBuffer) => { return }];
     onProcessError = [(error: string) => { return }];
 
     taskID: number = null;
     pollingTime = 15000;
 
-    async startImageProcessing(): Promise<void> {
+    host: string = 'http://localhost:5002';
+
+    async startLoRaProcessing(): Promise<void> {
         const formData = new FormData();
-        formData.append('input_image', this.inputImage);
-        formData.append('team1', this.team1);
-        formData.append('team2', this.team2);
+        formData.append('input_file', this.inputFile);
+        formData.append('team', this.team);
+        formData.append('steps', this.steps.toString());
 
         try {
             this.onProcessStart.forEach(f => f());
@@ -34,9 +34,8 @@ export default class ModelApi {
             });
 
             //SONO RIMASTO QUA!!!!!!!!! questo sopra va, quello sotto no --> provare sopra con una POST, se va allora il problema è nella mia api e non di collegamento
-            //Se mi rimane tempo, per la modelAPI potrei fare un Context al posto di prop
 
-            const response = await fetch(this.host + '/process-image/start', {
+            const response = await fetch(this.host + '/process-lora/start', {
                 method: 'POST',
                 body: formData,
             });
@@ -49,8 +48,8 @@ export default class ModelApi {
 
             const json = await response.json();
             this.taskID = json.task_id
-            console.log('Processing immagine iniziato: taskID=' + this.taskID)
-            setTimeout(this.updateImageProcessing.bind(this), this.pollingTime);
+            console.log('Processing LoRa iniziato: taskID=' + this.taskID)
+            setTimeout(this.updateLoRaProcessing.bind(this), this.pollingTime);
         } catch (error) {
             this.onProcessError.forEach(f => f(error));
             console.error('Error: ', error);
@@ -58,9 +57,9 @@ export default class ModelApi {
         }
     }
 
-    async updateImageProcessing(): Promise<void> {
+    async updateLoRaProcessing(): Promise<void> {
         try {
-            const response = await fetch(this.host + '/process-image/update/' + this.taskID, {
+            const response = await fetch(this.host + '/process-lora/update/' + this.taskID, {
                 method: 'GET'
             });
 
@@ -71,10 +70,10 @@ export default class ModelApi {
             }
             
             if(response.status == 200) {
-                this.finalizeImageProcessing()
+                this.finalizeLoRaProcessing()
             }
             else {
-                setTimeout(this.updateImageProcessing.bind(this), this.pollingTime);
+                setTimeout(this.updateLoRaProcessing.bind(this), this.pollingTime);
             }
         } catch (error) {
             this.onProcessError.forEach(f => f(error));
@@ -83,9 +82,9 @@ export default class ModelApi {
         }
     }
 
-    async finalizeImageProcessing(): Promise<void> {
+    async finalizeLoRaProcessing(): Promise<void> {
         try {
-            const response = await fetch(this.host + '/process-image/finalize/' + this.taskID, {
+            const response = await fetch(this.host + '/process-lora/finalize/' + this.taskID, {
                 method: 'GET'
             });
 
@@ -98,7 +97,7 @@ export default class ModelApi {
 
             const blob = await response.blob();
             const reader = new FileReader();
-            reader.onloadend = () => this.onProcessEndWithSuccess.forEach(f => f(reader.result));
+            reader.onloadend = () => this.onProcessSuccess.forEach(f => f(reader.result));
             reader.readAsDataURL(blob);
         } catch (error) {
             this.onProcessError.forEach(f => f(error));
