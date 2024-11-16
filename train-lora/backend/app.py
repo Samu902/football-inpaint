@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, send_file
-from PIL import Image
 import pipeline
-from my_util import PIL_to_base64, base64_to_PIL, log_exc_to_file
+from my_util import zip_bytes_to_base64, log_exc_to_file
 
 app = Flask(__name__)
 
@@ -17,12 +16,13 @@ cors_headers = {
 def home():
     try:
         return send_file(
-            './last_processed.png',
-            mimetype='image/png',
+            './pytorch_lora_weights.safetensors',
+            mimetype='application/octet-stream',
             as_attachment=True,
-            download_name='processed_image.png'
+            download_name='pytorch_lora_weights.safetensors'
         ), 200, cors_headers
     except Exception as e:
+        log_exc_to_file()
         return jsonify({'error': str(e)}), 500, cors_headers
 
 @app.route('/process-lora/start', methods=['POST'])
@@ -39,14 +39,14 @@ def process_image_start():
     
     input_file = request.files['input_file']
     team = request.form.get('team')
-    steps = request.form.get('steps')
+    steps = int(request.form.get('steps'))
     
     if input_file.filename == '':
         return jsonify({'error': 'No selected file'}), 500, cors_headers
 
     try:
-        zip_file = None#PIL_to_base64(Image.open(input_file.stream))    DA RIVEDERE
-        task = pipeline.start_new_task.delay(zip_file, team, steps)
+        zip_b64 = zip_bytes_to_base64(input_file.stream.read())
+        task = pipeline.start_new_task.delay(zip_b64, team, steps)
     except Exception as e:
         log_exc_to_file()
         return jsonify({'error': str(e)}), 500, cors_headers
@@ -76,14 +76,11 @@ def process_image_update(task_id):
 @app.route('/process-lora/finalize/<task_id>', methods=['GET'])
 def process_image_finalize(task_id):
     try:
-        # TUTTO DA RIVEDERE
-        processed_image = base64_to_PIL(pipeline.celery.AsyncResult(task_id).info)
-        processed_image.save(fp='./last_processed.png')
         return send_file(
-            './last_processed.png',
-            mimetype='image/png',
+            './pytorch_lora_weights.safetensors',
+            mimetype='application/octet-stream',
             as_attachment=True,
-            download_name='processed_image.png'
+            download_name='pytorch_lora_weights.safetensors'
         ), 200, cors_headers
     except Exception as e:
         log_exc_to_file()
