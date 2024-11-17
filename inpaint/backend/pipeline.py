@@ -157,6 +157,7 @@ def start_new_task(image_base64: str, team1: str, team2: str):
             cmfile = mfile.crop((b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad))                           # create cropped mask image                                                                          # display to screen
             cmfile.save(fp=f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg")                              # save to disk
         i += 1
+    result_stage_2a.save(filename=f"data/stage_2a/result.jpg")
 
     # ----------------------------
 
