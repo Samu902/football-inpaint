@@ -66,7 +66,7 @@ def start_new_task(zip_base64: str, team_name: str, steps: int):
 
     # setup training command
     command = [
-        "accelerate", "launch", "./models/train-lora-sdxl-inpaint/diffusers/examples/research_projects/dreambooth_inpaint/train_dreambooth_inpaint_lora_sdxl.py",
+        "accelerate", "launch", "./train-lora-sdxl-inpaint/diffusers/examples/research_projects/dreambooth_inpaint/train_dreambooth_inpaint_lora_sdxl.py",
         "--pretrained_model_name_or_path", model_path,
         "--instance_prompt", instance_prompt,
         "--instance_data_dir", instance_data_dir,
