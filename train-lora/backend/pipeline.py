@@ -61,7 +61,7 @@ def start_new_task(zip_base64: str, team_name: str, steps: int):
     model_path = "./models/sdxl_inpainting_model"
     instance_prompt = f"ftbllplyr {team_code}"
     instance_data_dir = "./data/training_images"
-    output_dir = "."
+    output_dir = os.getcwd()
     train_steps = steps
 
     # setup training command
@@ -87,10 +87,9 @@ def start_new_task(zip_base64: str, team_name: str, steps: int):
         print(f"Starting training with prompt '{instance_prompt}', training images from '{instance_data_dir}' and outputting to '{output_dir}'...")
         result = subprocess.run(command, capture_output=True, text=True, check=True)
         print(result.stdout)
+        print(result.stderr)
     except subprocess.CalledProcessError as exc:
         raise Exception(exc.output)
-        #print(f"Training command failed with return_code={exc.returncode}:\n{exc.output}")
-        #with open('app.log', 'w+') as f:
-        #    f.write(f"Training command failed with return_code={exc.returncode}:\n{exc.output}")
 
     # not returning anything, since the lora file was already saved to disk
+    print(f"Training finished, .safetensors file available in {output_dir}.")
