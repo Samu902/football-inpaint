@@ -49,7 +49,7 @@ def start_new_task(zip_base64: str, team_name: str, steps: int):
     # prepare environment
     init_enviroment()
 
-    # convert and unzip file to training images folder
+    # convert and unzip file to training images folder (important: images must be in the root folder of .zip file)
     zip_buffer = base64_to_zip_buffer(zip_base64)
     with zipfile.ZipFile(zip_buffer, 'r') as zip_file: 
         zip_file.extractall('./data/training_images')
