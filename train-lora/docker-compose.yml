@@ -11,5 +11,5 @@ services:
             - "6002:80"
             - "5002:5002"
         volumes:
-            - ./var/log:/var/log/nginx
+            - ./frontend/var/log:/var/log/nginx
             - ./backend/models:/usr/share/nginx/html/backend/models

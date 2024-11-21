@@ -31,5 +31,5 @@ RUN ln -s . football-inpaint-train-lora
 EXPOSE 80
 EXPOSE 5002
 
-#launch redis, celery, flask and nginx
+# launch redis, celery, flask and nginx
 CMD ["sh", "-c", "redis-server --daemonize yes & celery -A pipeline.celery worker --loglevel=INFO & python3 backend/app.py & nginx -g 'daemon off;'"]
