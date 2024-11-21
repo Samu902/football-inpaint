@@ -1,14 +1,14 @@
 services:
-    football-inpaint:
-        image: football-inpaint
-        container_name: football-inpaint
+    football-inpaint-train-lora:
+        image: football-inpaint-train-lora
+        container_name: football-inpaint-train-lora
         restart: always
         build:
             context: .
             network: host
             dockerfile: Dockerfile
         ports:
-            - "6001:80"
+            - "6002:80"
             - "5002:5002"
         volumes:
             - ./var/log:/var/log/nginx
