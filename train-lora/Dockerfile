@@ -22,7 +22,9 @@ COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 RUN mkdir -p backend/models
 
 # copy backend app into image
-COPY backend/train-lora-sdxl-inpaint backend/app.py backend/my_util.py backend/pipeline.py backend/requirements.txt ./backend/
+RUN mkdir -p backend/train-lora-sdxl-inpaint
+COPY backend/app.py backend/my_util.py backend/pipeline.py backend/requirements.txt ./backend/
+COPY backend/train-lora-sdxl-inpaint/* backend/train-lora-sdxl-inpaint
 # install python, pip, git, redis and pip dependencies
 RUN apt-get update && apt-get -y install python3.10 python3-pip git redis-server && pip install --break-system-packages diffusers accelerate transformers peft torch torchvision huggingface_hub flask celery[redis]
 
@@ -32,4 +34,4 @@ EXPOSE 80
 EXPOSE 5002
 
 # launch redis, celery, flask and nginx
-CMD ["sh", "-c", "redis-server --daemonize yes & celery -A pipeline.celery worker --loglevel=INFO & python3 backend/app.py & nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "redis-server --daemonize yes & (cd backend && celery -A pipeline.celery worker --loglevel=INFO) & (cd .. && python3 backend/app.py) & nginx -g 'daemon off;'"]
