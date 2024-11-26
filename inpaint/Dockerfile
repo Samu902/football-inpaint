@@ -32,4 +32,4 @@ EXPOSE 80
 EXPOSE 5001
 
 # launch redis, celery, flask and nginx
-CMD ["sh", "-c", "redis-server --daemonize yes & celery -A pipeline.celery worker --loglevel=INFO & python3 backend/app.py & nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "redis-server --daemonize yes & (cd backend && celery -A pipeline.celery worker --loglevel=INFO) & (cd .. && python3 backend/app.py) & nginx -g 'daemon off;'"]
