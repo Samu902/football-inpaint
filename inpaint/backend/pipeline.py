@@ -56,7 +56,7 @@ def init_enviroment():
     if not os.path.isfile('./models/roboflow_model/best.pt'):
         gdown.download(id='103DgLujAKKLlfETz-rgDO0-ibvQh7evQ', output='./roboflow_model/best.pt')
     if not os.path.isdir('./models/sdxl_lora_weights'):
-        gdown.download_folder(id='1VvzOiPwhkv7fuK7P3IktuEzuXdnKg3Le', output='./sdxl_lora_weights')
+        gdown.download_folder(id='1VvzOiPwhkv7fuK7P3IktuEzuXdnKg3Le', output='./models/sdxl_lora_weights')
 
     # initialize models not to waste time and memory every time
     ROBOFLOW_DETECTION_MODEL = YOLO("models/roboflow_model/best.pt")            # pretrained Roboflow YOLO model (training_model_1.ipynb)
