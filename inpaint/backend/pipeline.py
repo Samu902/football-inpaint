@@ -65,7 +65,7 @@ def init_enviroment():
     TEAM_CLASSIFIER_MODEL = TeamClassifier(device=DEVICE)                       # Roboflow all-in-one Team Classifier model
     SDXL_INPAINTING_PIPELINE = AutoPipelineForInpainting.from_pretrained(       # SDXL inpainting model
         "diffusers/stable-diffusion-xl-1.0-inpainting-0.1",
-        #torch_dtype=torch.float16,
+        torch_dtype=torch.float16,
         use_safetensors=True
     ).to(DEVICE)
     # load team lora weights on sdxl model
