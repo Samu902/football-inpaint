@@ -263,6 +263,11 @@ def start_new_task(image_base64: str, team1: str, team2: str):
         #mask_image = Image.new("L", (1024, 1024), 255)
 
         team_code = team1_code if team_ids[i] == 0 else team2_code
+        team1_weight = 1.0 if team_ids[i] == 0 else 0.0
+        team2_weight = 1.0 if team_ids[i] == 1 else 0.0
+
+        team_colors_str = ' '.join([c for c in total_colors if c in team_colors_dict[team_code]])
+        not_team_colors_str = ' '.join([c for c in total_colors if c not in team_colors_dict[team_code]])
 
         # set prompt and adapter based on team classification
         prompt = f"ftbllplyr {team_code}"
