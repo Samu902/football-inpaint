@@ -34,7 +34,7 @@ celery = Celery(
 )
 #celery -A pipeline.celery worker --loglevel=INFO
 
-def init_enviroment():
+def init_environment(team_1: str, team_2: str):
     print('Initializing pipeline environment...')
 
     # setup env var
@@ -69,12 +69,8 @@ def init_enviroment():
         use_safetensors=True
     ).to(DEVICE)
     # load team lora weights on sdxl model
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqjvnts", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqjvnts")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqfrntn", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqfrntn")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqntrxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqntrxx")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqmlnxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqmlnxx")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqnplxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqnplxx")
-    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/sqrmxxx", weight_name="pytorch_lora_weights.safetensors", adapter_name="sqrmxxx")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/{team_1}", weight_name="pytorch_lora_weights.safetensors", adapter_name=f"{team_1}")
+    SDXL_INPAINTING_PIPELINE.load_lora_weights(f"./models/sdxl_lora_weights/{team_2}", weight_name="pytorch_lora_weights.safetensors", adapter_name=f"{team_2}")
 
     print('Cleaning data directory...')
 
@@ -102,13 +98,23 @@ def start_new_task(image_base64: str, team1: str, team2: str):
     ## STAGE 0
     # preparazione dell'ambiente prima dell'esecuzione dei modelli della pipeline
 
-    # init_environment
-    DEVICE, ROBOFLOW_DETECTION_MODEL, SAM2_SEGMENT_MODEL, TEAM_CLASSIFIER_MODEL, SDXL_INPAINTING_PIPELINE = init_enviroment()
-
-    # translate team codes
+    # translate team codes and colors
     team_dict = { 'Juventus': 'sqjvnts', 'Fiorentina': 'sqfrntn', 'Inter': 'sqntrxx', 'Milan': 'sqmlnxx', 'Napoli': 'sqnplxx', 'Roma': 'sqrmxxx' }
     team1_code = team_dict[team1]
     team2_code = team_dict[team2]
+
+    total_colors = ['white', 'black', 'orange', 'pink', 'red', 'blue', 'lightblue', 'yellow', 'brown', 'green', 'grey', 'purple']
+    team_colors_dict = {
+        'sqjvnts': ['white', 'black'],
+        'sqfrntn': ['purple'],
+        'sqntrxx': ['blue', 'black'],
+        'sqmlnxx': ['red', 'black'],
+        'sqnplxx': ['lightblue'],
+        'sqrmxxx': ['red', 'orange']
+    }
+
+    # init_environment
+    DEVICE, ROBOFLOW_DETECTION_MODEL, SAM2_SEGMENT_MODEL, TEAM_CLASSIFIER_MODEL, SDXL_INPAINTING_PIPELINE = init_environment(team1_code, team2_code)
 
     # save input image
     input_image = base64_to_PIL(image_base64).convert('RGB')
