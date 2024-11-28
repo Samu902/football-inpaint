@@ -210,7 +210,7 @@ def start_new_task(image_base64: str, team1: str, team2: str):
         i += 1
 
     # DEBUG
-    return PIL_to_base64(input_image)
+    #return PIL_to_base64(input_image)
 
     # ----------------------------
 
@@ -239,7 +239,7 @@ def start_new_task(image_base64: str, team1: str, team2: str):
                 )
             )
         )
-    
+
     # Run inference (inpainting)
 
     generator = torch.Generator(device=DEVICE).manual_seed(9)
@@ -294,7 +294,7 @@ def start_new_task(image_base64: str, team1: str, team2: str):
 
     ## STAGE 4
     # ricomposizione dell'immagine originale con i giocatori ridisegnati
-    
+
     # Apri l'immagine di sfondo
     general_image = Image.open('data/stage_0/input_image.jpg')
     i = 0
