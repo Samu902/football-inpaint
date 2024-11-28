@@ -22,6 +22,7 @@ import torch
 import cv2 as cv
 
 # stage 4
+import gc
 
 # celery
 from celery import Celery
@@ -284,6 +285,11 @@ def start_new_task(image_base64: str, team1: str, team2: str):
             break
         ###
 
+    # libera RAM e VRAM
+    del DEVICE, ROBOFLOW_DETECTION_MODEL, SAM2_SEGMENT_MODEL, TEAM_CLASSIFIER_MODEL, SDXL_INPAINTING_PIPELINE
+    torch.cuda.empty_cache()
+    gc.collect()
+
     # ----------------------------
 
     ## STAGE 4
@@ -307,8 +313,5 @@ def start_new_task(image_base64: str, team1: str, team2: str):
         ###
     # Salva l'immagine risultante
     general_image.save(f"data/stage_4/result.jpg")
-
-    ### per liberare memoria   DA FARE
-    #del boxes, masks ecc...
 
     return PIL_to_base64(general_image)
