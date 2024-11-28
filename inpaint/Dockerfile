@@ -24,8 +24,7 @@ RUN mkdir -p backend/models
 # copy backend app into image
 COPY backend/hi_res backend/app.py backend/my_util.py backend/pipeline.py backend/requirements.txt ./backend/
 # install python, pip, git, redis and pip dependencies
-RUN apt-get update && apt-get -y install python3.10 python3-pip git redis-server libgl1 libglib2.0-0 && pip install --break-system-packages flask pillow gdown ultralytics git+https://github.com/roboflow/sports.git#egg=sports diffusers celery[redis]
-
+RUN apt-get update && apt-get -y install python3.10 python3-pip git redis-server libgl1 libglib2.0-0 && pip install --break-system-packages flask pillow gdown ultralytics git+https://github.com/roboflow/sports.git#egg=sports diffusers celery[redis] transformers torch peft opencv-python scikit-learn
 RUN ln -s . football-inpaint
 
 EXPOSE 80
