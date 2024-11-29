@@ -17,6 +17,10 @@ import copy
 from sports.common.team import TeamClassifier
 
 # stage 3
+import torchvision.models as models
+import torchvision.transforms as transforms
+from sklearn.metrics.pairwise import cosine_similarity
+
 from diffusers import AutoPipelineForInpainting
 import torch
 import cv2 as cv
@@ -215,15 +219,61 @@ def start_new_task(image_base64: str, team1: str, team2: str):
         im.save(fp=f"data/stage_2b/team_{team_ids[i]}/player_{i}.jpg")
         i += 1
 
-    # DEBUG
-    #return PIL_to_base64(input_image)
-
     # ----------------------------
 
     ## STAGE 3
     # questo modello, a partire dalle immagini ritagliate dei giocatori e alle rispettive maschere, ridisegna i giocatori (inpainting) usando le squadre fornite dall'utente
     # da repo nikgli, sdxl-inpainting-lora.py: "this script is for doing inpainting on the sd/sdxl inpainting model with lora weights"
-    
+
+    # Load a pre-trained ResNet model
+    resnet = models.resnet50(pretrained=True)
+    resnet.eval()  # Set the model to evaluation mode
+
+    # Define image transformations
+    transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    def extract_features(image_path):
+        img = Image.open(image_path).convert('RGB')
+        img_tensor = transform(img)
+        img_tensor = img_tensor.unsqueeze(0)  # Add a batch dimension
+        with torch.no_grad():
+            features = resnet(img_tensor)
+        return features.squeeze().numpy()
+
+    def find_most_similar(input_image_path, image_set_paths):
+        input_features = extract_features(input_image_path)
+        similarities = []
+        for img_path in image_set_paths:
+            try:
+                features = extract_features(img_path)
+                similarity = cosine_similarity([input_features], [features])[0][0]
+                similarities.append((img_path, similarity))
+            except Exception as e:  # Handle potential errors like invalid images
+                print(f"Error processing image {img_path}: {e}")
+                similarities.append((img_path, -1)) # Assign -1 for errors so they are ranked last
+
+        similarities.sort(key=lambda x: x[1], reverse=True) # Sort in descending order
+        return similarities[0][0]
+
+    # find most similar hi-res mask and base starting from player cropped mask
+    hi_res_masks_dir = './hi_res/mask'
+    hi_res_masks = [os.path.join(hi_res_masks_dir, m) for m in os.listdir(hi_res_masks_dir) if os.path.isfile(os.path.join(hi_res_masks_dir, m))]
+    mask_to_hi_res_dict = {}
+    for in_cmask in os.listdir('./data/stage_2a/cropped_masks'):
+        hi_res_mask_path = find_most_similar(os.path.join('./data/stage_2a/cropped_masks', in_cmask), hi_res_masks)
+        hi_res_base_path = hi_res_mask_path.replace('/mask/', '/base/')
+        mask_to_hi_res_dict[os.path.join('./data/stage_2a/cropped_masks', in_cmask)] = {
+            "mask": hi_res_mask_path,
+            "base": hi_res_base_path,
+        }
+
+    # ----------------------------
+
     # inner function to dilate a mask image
     def dilated_mask(mask, dilate_iterations = 6):
         return (
@@ -256,11 +306,6 @@ def start_new_task(image_base64: str, team1: str, team2: str):
         if not os.path.isfile(f"data/stage_1/players/player_{i}.jpg"):      # only players (other classes' images haven't been processed, so skip them)
             i += 1
             continue
-        
-        init_image = Image.open(f"data/stage_1/players/player_{i}.jpg").convert('RGB').resize((1024, 1024))     # load and resize player image
-        #init_image = Image.new("RGB", (1024, 1024), (15, 191, 88))     # se la qualità fa schifo, provare questa come input
-        mask_image = dilated_mask(Image.open(f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg").convert('L').resize(output_inpaint_size), 6) # load, dilate and resize mask
-        #mask_image = Image.new("L", (1024, 1024), 255)
 
         team_code = team1_code if team_ids[i] == 0 else team2_code
         team1_weight = 1.0 if team_ids[i] == 0 else 0.0
@@ -270,19 +315,21 @@ def start_new_task(image_base64: str, team1: str, team2: str):
         not_team_colors_str = ' '.join([c for c in total_colors if c not in team_colors_dict[team_code]])
 
         # set prompt and adapter based on team classification
-        prompt = f"ftbllplyr {team_code}"
-        negative_prompt = "orange pink red blue yellow brown green grey purple"
-        #negative_prompt = "weird shape, unrealistic"
-        #prompt = "soccer player, realistic, vertical striped jersey, vertical white stripes, vertical black stripes"
-        #negative_prompt = "blurred, blur, unrealistic, distorted, unnatural pose, cartoon style, vector style, child, orange, red, blue, yellow, brown, green, grey, purple"
-        SDXL_INPAINTING_PIPELINE.set_adapters(team_code)
-        
+        prompt = f"ftbllplyr {team_code} {team_colors_str}"
+        negative_prompt = f"{not_team_colors_str}"
+        SDXL_INPAINTING_PIPELINE.set_adapters([team1_code, team2_code], adapter_weights=[team1_weight, team2_weight])
+
+        init_image = Image.open(mask_to_hi_res_dict[f"./data/stage_2a/cropped_masks/cropped_mask_{i}.jpg"]["base"]).convert('RGB').resize(output_inpaint_size)                  # load and resize player image
+        mask_image = dilated_mask(Image.open(mask_to_hi_res_dict[f"./data/stage_2a/cropped_masks/cropped_mask_{i}.jpg"]["mask"]).convert('L').resize(output_inpaint_size), 6)   # load, dilate and resize mask
+
+        print(f'player {i}: prompt={prompt}, negative_prompt={negative_prompt}, team1_weight={team1_weight}, team2_weight={team2_weight}')
+
         image = SDXL_INPAINTING_PIPELINE(
             prompt=prompt,
             negative_prompt=negative_prompt,
             image=init_image,
             mask_image=mask_image,
-            guidance_scale=8.0,
+            guidance_scale=10.0,   # 8.0 oppure 5.0
             num_inference_steps=30,
             strength=0.99,
             generator=generator,
@@ -291,10 +338,6 @@ def start_new_task(image_base64: str, team1: str, team2: str):
         ).images[0]                                             # inference (inpainting)
         image.save(f"data/stage_3/result_{i}.jpg")              # save to disk
         i += 1
-        ### SHORTCUT DEBUG
-        if(i >= 1):
-            break
-        ###
 
     # libera RAM e VRAM
     del DEVICE, ROBOFLOW_DETECTION_MODEL, SAM2_SEGMENT_MODEL, TEAM_CLASSIFIER_MODEL, SDXL_INPAINTING_PIPELINE
@@ -311,17 +354,13 @@ def start_new_task(image_base64: str, team1: str, team2: str):
     i = 0
     for player_box in boxes:
         # round box coordinates and convert to list
-        player_box = [round(b) for b in player_box.tolist()]     
+        player_box = [round(b) for b in player_box.tolist()]
         # Apri l'immagine da incollare e la maschera per ritagliarla
-        player_image = Image.open(f"data/stage_3/result_{i}.jpg").resize((player_box[2] - player_box[0] + pad * 2, player_box[3] - player_box[1] + pad * 2))
-        mask_image = dilated_mask(Image.open(f"data/stage_2a/cropped_masks/cropped_mask_{i}.jpg").resize((player_box[2] - player_box[0] + pad * 2, player_box[3] - player_box[1] + pad * 2)), 2).convert('L')
+        player_image = Image.open(f"data/stage_3/result_{i}.jpg").convert('RGB').resize((player_box[2] - player_box[0] + pad, player_box[3] - player_box[1] + pad))
+        mask_image = dilated_mask(Image.open(f"./data/stage_2a/cropped_masks/cropped_mask_{i}.jpg").resize(player_image.size), 0).convert('L')
         # Incolla l'immagine
-        general_image.paste(player_image, (player_box[0] - pad, player_box[1] - pad), mask_image)
+        general_image.paste(player_image, (player_box[0] - round(pad / 2), player_box[1] - round(pad / 2)), mask_image)
         i += 1
-        ### SHORTCUT DEBUG
-        if(i >= 2):
-            break
-        ###
     # Salva l'immagine risultante
     general_image.save(f"data/stage_4/result.jpg")
 
