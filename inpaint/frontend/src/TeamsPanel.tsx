@@ -18,12 +18,12 @@ export default function TeamsPanel(props: TeamsPanelProps) {
 
     function updateSelectedTeam1(index: number) {
         setSelectedTeam1(index);
-        props.modelApi.team1 = shirts[index].img;
+        props.modelApi.team1 = shirts[index].team;
     }
 
     function updateSelectedTeam2(index: number) {
         setSelectedTeam2(index);
-        props.modelApi.team2 = shirts[index].img;
+        props.modelApi.team2 = shirts[index].team;
     }
 
     return (
