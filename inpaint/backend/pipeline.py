@@ -59,7 +59,7 @@ def init_environment(team_1: str, team_2: str):
 
     # download roboflow model and loras from google drive if not present
     if not os.path.isfile('./models/roboflow_model/best.pt'):
-        gdown.download(id='103DgLujAKKLlfETz-rgDO0-ibvQh7evQ', output='./roboflow_model/best.pt')
+        gdown.download(id='103DgLujAKKLlfETz-rgDO0-ibvQh7evQ', output='./models/roboflow_model/best.pt')
     if not os.path.isdir('./models/sdxl_lora_weights'):
         gdown.download_folder(id='1VvzOiPwhkv7fuK7P3IktuEzuXdnKg3Le', output='./models/sdxl_lora_weights')
 
