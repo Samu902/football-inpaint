@@ -26,7 +26,7 @@ def home():
         return jsonify({'error': str(e)}), 500, cors_headers
 
 @app.route('/process-lora/start', methods=['POST'])
-def process_image_start():
+def process_lora_start():
 
     if 'input_file' not in request.files:
         return jsonify({'error': 'No input .zip file'}), 500, cors_headers
@@ -54,7 +54,7 @@ def process_image_start():
     return jsonify({'info': 'Your lora training request was enqueued successfully', 'task_id': task.id}), 202, cors_headers
 
 @app.route('/process-lora/update/<task_id>', methods=['GET'])
-def process_image_update(task_id):
+def process_lora_update(task_id):
     try:
         task = pipeline.celery.AsyncResult(task_id)
         if task.state == 'PENDING':
@@ -74,7 +74,7 @@ def process_image_update(task_id):
         return jsonify({'error': str(e)}), 500, cors_headers
 
 @app.route('/process-lora/finalize/<task_id>', methods=['GET'])
-def process_image_finalize(task_id):
+def process_lora_finalize(task_id):
     try:
         return send_file(
             './pytorch_lora_weights.safetensors',
