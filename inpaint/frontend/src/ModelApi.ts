@@ -23,19 +23,17 @@ export default class ModelApi {
             this.onProcessStart.forEach(f => f());
 
             //test connessione a backend
-            await fetch(this.host, {
-                method: 'GET'
-            });
+            //await fetch(this.host, {
+            //    method: 'GET'
+            //});
 
             //test connessione a backend
-            await fetch(this.host, {
-                method: 'POST',
-                body: null
-            });
+            //await fetch(this.host, {
+            //    method: 'POST',
+            //    body: null
+            //});
 
-            //SONO RIMASTO QUA!!!!!!!!! questo sopra va, quello sotto no --> provare sopra con una POST, se va allora il problema è nella mia api e non di collegamento
-            //Se mi rimane tempo, per la modelAPI potrei fare un Context al posto di prop
-
+            // potrei fare un Context al posto di prop
             const response = await fetch(this.host + '/process-image/start', {
                 method: 'POST',
                 body: formData,
